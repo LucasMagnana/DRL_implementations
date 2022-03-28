@@ -8,16 +8,14 @@ import copy
 import numpy as np
 import torch
 
-from python.hyperParams import hyperParams as hp
 from python.NeuralNetworks import Actor
 
 class DDQNAgent(object):
-    def __init__(self, action_space, observation_space, cuda=False, hyperParams=None, actor_to_load=None):
+    def __init__(self, action_space, observation_space, hyperParams, cuda=False, actor_to_load=None):
 
-        if(hyperParams == None): #use the good hyper parameters (loaded if it's a test, written in the code if it's a training)
-            self.hyperParams = hp
-        else:
-            self.hyperParams = hyperParams
+        self.hyperParams = hyperParams
+        
+        if(actor_to_load != None): #use the good hyper parameters (loaded if it's a test, written in the code if it's a training)
             self.hyperParams.EPSILON = 0
 
         self.action_space = action_space   
@@ -31,7 +29,7 @@ class DDQNAgent(object):
 
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.actor = Actor(observation_space.shape[0], action_space.n).to(self.device) #for cartpole
+        self.actor = Actor(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) #for cartpole
 
         self.batch_size = self.hyperParams.BATCH_SIZE
 

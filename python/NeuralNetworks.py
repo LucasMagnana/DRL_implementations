@@ -2,19 +2,14 @@ import torch
 from torch import nn
 from torch.autograd import Variable
 
-import python.hyperParams as HP
 
 
 
 class Actor(nn.Module):
 
-    def __init__(self, size_ob, size_action, max_action=1, hp_loaded=None, tanh=False): #for saved hyperparameters
+    def __init__(self, size_ob, size_action, hyperParams, max_action=1, tanh=False): #for saved hyperparameters
         super(Actor, self).__init__()
-        if(hp_loaded == None):
-            hyperParams=HP.hyperParams
-        else:
-            hyperParams=hp_loaded
-
+        print(hyperParams)
         self.inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE)
         self.int = nn.Linear(hyperParams.HIDDEN_SIZE, hyperParams.ACT_INTER)
         self.out = nn.Linear(hyperParams.ACT_INTER, size_action)
@@ -35,9 +30,8 @@ class Actor(nn.Module):
 
 class Critic(nn.Module):
 
-    def __init__(self, size_ob, size_action):
+    def __init__(self, size_ob, size_action, hyperParams):
         super(Critic, self).__init__()
-        hyperParams=HP.hyperParams
         self.inp = nn.Linear(size_ob+size_action, hyperParams.CRIT_IN)
         self.int = nn.Linear(hyperParams.CRIT_IN, hyperParams.CRIT_INTER)
         self.out = nn.Linear(hyperParams.CRIT_INTER, 1)
@@ -51,12 +45,8 @@ class Critic(nn.Module):
         
 
 class REINFORCE_Model(nn.Module):
-    def __init__(self, size_ob, size_action, hp_loaded=None):
-        super(REINFORCE_Model, self).__init__()
-        if(hp_loaded == None):
-            hyperParams=HP.hyperParams
-        else:
-            hyperParams=hp_loaded
+    def __init__(self, size_ob, size_action, hyperParams):
+        super(REINFORCE_Model, self).__init__()       
         self.inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE)
         self.out = nn.Linear(hyperParams.HIDDEN_SIZE, size_action)
         self.sm = nn.Softmax(dim=-1)
@@ -71,12 +61,8 @@ class REINFORCE_Model(nn.Module):
 
 
 class PPO_Actor(nn.Module):
-    def __init__(self, size_ob, size_action, hp_loaded=None):
+    def __init__(self, size_ob, size_action, hyperParams):
         super(PPO_Actor, self).__init__()
-        if(hp_loaded == None):
-            hyperParams=HP.hyperParams
-        else:
-            hyperParams=hp_loaded
         self.act_inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE)
         self.act_out = nn.Linear(hyperParams.HIDDEN_SIZE, size_action)
         self.sm = nn.Softmax(dim=-1)
@@ -90,13 +76,8 @@ class PPO_Actor(nn.Module):
 
 
 class PPO_Critic(nn.Module):
-    def __init__(self, size_ob, hp_loaded=None):
+    def __init__(self, size_ob, hyperParams):
         super(PPO_Critic, self).__init__()
-        if(hp_loaded == None):
-            hyperParams=HP.hyperParams
-        else:
-            hyperParams=hp_loaded
-
         self.crit_inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE)
         self.crit_out = nn.Linear(hyperParams.HIDDEN_SIZE, 1)
     

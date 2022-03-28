@@ -10,7 +10,7 @@ import datetime as dt
 
 from python.TD3Agent import *
 from python.DDQNAgent import *
-from python.hyperParams import hyperParams, module
+from python.hyperParams import *
 
 from test import test
 
@@ -21,7 +21,6 @@ from test import test
 if __name__ == '__main__':
 
     cuda=False
-
     cuda = cuda and torch.cuda.is_available()
     print("cuda:", cuda)
     if(cuda):
@@ -29,12 +28,15 @@ if __name__ == '__main__':
 
     env = gym.make(module) #gym env
 
-    if("Continuous" in module): #agents are not the same wether the action space is continuous or discrete     
-        agent = TD3Agent(env.action_space, env.observation_space, cuda)
+    if("Continuous" in module): #agents are not the same wether the action space is continuous or discrete
+        hyperParams = TD3HyperParams()     
+        agent = TD3Agent(env.action_space, env.observation_space, hyperParams, cuda=cuda)
     else:
-        agent = DDQNAgent(env.action_space, env.observation_space, cuda=cuda)
+        hyperParams = DDQNHyperParams()
+        agent = DDQNAgent(env.action_space, env.observation_space, hyperParams, cuda=cuda)
 
     tab_sum_rewards = []
+    tab_mean_rewards = []
 
     for e in range(1, hyperParams.EPISODE_COUNT):
         ob = env.reset()
@@ -52,18 +54,18 @@ if __name__ == '__main__':
             if done or steps > hyperParams.MAX_STEPS:
                 if(len(agent.buffer)>hyperParams.LEARNING_START):
                     agent.learn(steps)
-                tab_sum_rewards.append(sum_rewards)      
+                tab_sum_rewards.append(sum_rewards)   
+                tab_mean_rewards.append(np.mean(tab_sum_rewards[-100:]))   
                 break
 
-        print("\rEp: {} Average of last 100: {:.2f}".format(e, np.mean(tab_sum_rewards[-100:])), end="")
-        if(np.mean(tab_sum_rewards[-100:]) > 300):
-            break
+        print("\rEp: {} Average of last 100: {:.2f}".format(e, tab_mean_rewards[-1]), end="")
           
 
     
     #plot the sums of rewards and the noise (noise shouldnt be in the same graph but for now it's good)
     plt.figure(figsize=(25, 12), dpi=80)
     plt.plot(tab_sum_rewards, linewidth=1)
+    plt.plot(tab_mean_rewards, linewidth=1)
     plt.ylabel('Sum of the rewards')       
     plt.savefig("./images/"+module+".png")
     

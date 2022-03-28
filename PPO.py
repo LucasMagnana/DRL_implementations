@@ -10,12 +10,12 @@ import datetime as dt
 from python.NeuralNetworks import PPO_Actor, PPO_Critic
 from python.TD3Agent import *
 from python.DDQNAgent import *
-from python.hyperParams import hyperParams, module
+from python.hyperParams import PPOHyperParams, module
 
 from test import test
 
 
-def discount_rewards(rewards, gamma=hyperParams.GAMMA):
+def discount_rewards(rewards, gamma):
     r = np.array([gamma**i * rewards[i] for i in range(len(rewards))])
     # Reverse the array direction for cumsum and then
     # revert back to the original order
@@ -23,7 +23,7 @@ def discount_rewards(rewards, gamma=hyperParams.GAMMA):
     return r - r.mean()
 
 
-def gae(rewards, values, episode_ends, gamma=hyperParams.GAMMA, lam=0.5):
+def gae(rewards, values, episode_ends, gamma, lam):
     """Compute generalized advantage estimate.
         rewards: a list of rewards at each step.
         values: the value estimate of the state at each step.
@@ -53,8 +53,11 @@ def gae(rewards, values, episode_ends, gamma=hyperParams.GAMMA, lam=0.5):
 if __name__ == '__main__':
     env = gym.make(module) #gym env
 
-    actor = PPO_Actor(env.observation_space.shape[0], env.action_space.n)
-    critic = PPO_Critic(env.observation_space.shape[0])
+    hyperParams = PPOHyperParams()
+
+    actor = PPO_Actor(env.observation_space.shape[0], env.action_space.n, hyperParams)
+    critic = PPO_Critic(env.observation_space.shape[0], hyperParams)
+    old_critic = copy.deepcopy(critic)
     
     # Set up lists to hold results
     total_rewards = []
@@ -99,8 +102,8 @@ if __name__ == '__main__':
             
             # If done, batch data
             if done:
-                batch_rewards.extend(discount_rewards(rewards))
-                gaes = gae(np.expand_dims(np.array(rewards), 0), np.expand_dims(np.array(values), 0), np.expand_dims(np.array([not elem for elem in list_done]), 0))
+                batch_rewards.extend(discount_rewards(rewards, hyperParams.GAMMA))
+                gaes = gae(np.expand_dims(np.array(rewards), 0), np.expand_dims(np.array(values), 0), np.expand_dims(np.array([not elem for elem in list_done]), 0), hyperParams.GAMMA, hyperParams.LAMBDA)
                 batch_advantages.extend(gaes[0])
                 batch_states.extend(states)
                 batch_values.extend(values)

@@ -2,8 +2,6 @@ from random import sample
 from random import * 
 import torch.nn.functional as F
 
-from python.hyperParams import hyperParams
-
 import numpy as np
 
 import copy
@@ -16,13 +14,16 @@ import matplotlib.pyplot as plt
 
 
 class TD3Agent(object):
-    def __init__(self, action_space, observation_space, cuda=False):
+    def __init__(self, action_space, observation_space, hyperParams, cuda=False):
 
-        self.buffer_size = hyperParams.BUFFER_SIZE
-        self.alpha = hyperParams.TAU
-        self.gamma = hyperParams.GAMMA
-        self.exploration_noise = hyperParams.EXPLORATION_NOISE
-        self.policy_noise = hyperParams.POLICY_NOISE
+        self.hyperParams = hyperParams
+
+        self.buffer_size = self.hyperParams.BUFFER_SIZE
+        self.alpha = self.hyperParams.TAU
+        self.gamma = self.hyperParams.GAMMA
+        self.exploration_noise = self.hyperParams.EXPLORATION_NOISE
+        self.policy_noise = self.hyperParams.POLICY_NOISE
+        self.batch_size = self.hyperParams.BATCH_SIZE
 
         self.action_space = action_space
         self.buffer = []
@@ -33,17 +34,17 @@ class TD3Agent(object):
 
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.critic_1 = Critic(observation_space.shape[0], action_space.shape[0]).to(device=self.device)
+        self.critic_1 = Critic(observation_space.shape[0], action_space.shape[0], self.hyperParams).to(device=self.device)
         self.critic_1_target = copy.deepcopy(self.critic_1).to(device=self.device)
-        self.critic_1_optimizer = torch.optim.Adam(self.critic_1.parameters(), hyperParams.LR_CRITIC, weight_decay=hyperParams.WEIGHT_DECAY)
+        self.critic_1_optimizer = torch.optim.Adam(self.critic_1.parameters(), self.hyperParams.LR_CRITIC, weight_decay=self.hyperParams.WEIGHT_DECAY)
         
-        self.critic_2 = Critic(observation_space.shape[0], action_space.shape[0]).to(device=self.device)
+        self.critic_2 = Critic(observation_space.shape[0], action_space.shape[0], self.hyperParams).to(device=self.device)
         self.critic_2_target = copy.deepcopy(self.critic_2).to(device=self.device)
-        self.critic_2_optimizer = torch.optim.Adam(self.critic_2.parameters(), hyperParams.LR_CRITIC, weight_decay=hyperParams.WEIGHT_DECAY)
-
-        self.actor = Actor(observation_space.shape[0], action_space.shape[0], action_space.high[0], tanh=True).to(device=self.device)
+        self.critic_2_optimizer = torch.optim.Adam(self.critic_2.parameters(), self.hyperParams.LR_CRITIC, weight_decay=self.hyperParams.WEIGHT_DECAY)
+        
+        self.actor = Actor(observation_space.shape[0], action_space.shape[0], self.hyperParams, max_action=action_space.high[0], tanh=True).to(device=self.device)
         self.actor_target = copy.deepcopy(self.actor).to(device=self.device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), hyperParams.LR_ACTOR)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), self.hyperParams.LR_ACTOR)
         
 
 
@@ -54,10 +55,11 @@ class TD3Agent(object):
         return torch.tensor(action).numpy()
         
 
-    def sample(self, n=hyperParams.BATCH_SIZE):
-        if(n > len(self.buffer)):
-            n = len(self.buffer)
-        return sample(self.buffer, n)
+    def sample(self):
+        if(len(self.buffer) < self.batch_size):
+            return sample(self.buffer, len(self.buffer))
+        else:
+            return sample(self.buffer, self.batch_size)
 
     def memorize(self, ob_prec, action, ob, reward, done):
         if(len(self.buffer) > self.buffer_size):
@@ -78,7 +80,7 @@ class TD3Agent(object):
             
             tens_noise = torch.empty(tens_action.shape)
             tens_noise = nn.init.normal_(tens_noise, mean=0, std=self.policy_noise)
-            tens_noise = tens_noise.clamp(-hyperParams.NOISE_CLIP, hyperParams.NOISE_CLIP)
+            tens_noise = tens_noise.clamp(-self.hyperParams.NOISE_CLIP, self.hyperParams.NOISE_CLIP)
             tens_next_action = (self.actor_target(tens_ob_next) + tens_noise)
             tens_next_action = tens_next_action.clamp(-self.action_space.high[0], self.action_space.high[0])
 
@@ -101,7 +103,7 @@ class TD3Agent(object):
             critic_2_loss.backward()
             self.critic_2_optimizer.step()
             
-            if(i%hyperParams.POLICY_DELAY == 0):
+            if(i%self.hyperParams.POLICY_DELAY == 0):
                 
                 actor_loss = -self.critic_1(tens_ob, self.actor(tens_ob)).mean()
                 self.actor_optimizer.zero_grad()

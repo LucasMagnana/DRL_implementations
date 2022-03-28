@@ -47,9 +47,30 @@ class DDQNHyperParams :
         self.EPSILON_DECAY = self.EPSILON/(self.EPISODE_COUNT*4/5)
 
 
-module = "CartPole-v1" #"LunarLanderContinuous-v2"
+class REINFORCEHyperParams :
+    def __init__(self):
+        self.LR = 0.01
+        self.BATCH_SIZE = 10
+        self.GAMMA = 0.99
 
-if("Continuous" in module):
-    hyperParams = TD3HyperParams()
-else:
-    hyperParams = DDQNHyperParams()
+        self.HIDDEN_SIZE = 16
+        self.ACT_INTER = 16
+
+        self.EPISODE_COUNT = 3000
+        self.MAX_STEPS = 1000
+
+
+class PPOHyperParams :
+    def __init__(self):
+        self.LR = 0.01
+        self.BATCH_SIZE = 10
+        self.GAMMA = 0.99
+        self.LAMBDA = 0.99
+
+        self.HIDDEN_SIZE = 16
+        self.ACT_INTER = 16
+
+        self.EPISODE_COUNT = 3000
+        self.MAX_STEPS = 1000
+
+module = "CartPole-v1" #"LunarLanderContinuous-v2"

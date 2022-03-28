@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import datetime as dt
 
 from python.DDQNAgent import *
-from python.hyperParams import hyperParams, module
 
 
 

@@ -10,12 +10,12 @@ import datetime as dt
 from python.NeuralNetworks import REINFORCE_Model
 from python.TD3Agent import *
 from python.DDQNAgent import *
-from python.hyperParams import hyperParams, module
+from python.hyperParams import REINFORCEHyperParams, module
 
 from test import test
 
 
-def discount_rewards(rewards, gamma=hyperParams.GAMMA):
+def discount_rewards(rewards, gamma):
     r = np.array([gamma**i * rewards[i] for i in range(len(rewards))])
     # Reverse the array direction for cumsum and then
     # revert back to the original order
@@ -28,12 +28,17 @@ if __name__ == '__main__':
 
     testing = False
 
+    hyperParams = REINFORCEHyperParams()
+
     if(len(sys.argv) > 1):
         if(sys.argv[1] == "--test"):
             testing = True
+            with open('./trained_networks/'+module+'_REINFORCE.hp', 'rb') as infile:
+                hyperParams = pickle.load(infile)
+            
 
 
-    policy = REINFORCE_Model(env.observation_space.shape[0], env.action_space.n)
+    policy = REINFORCE_Model(env.observation_space.shape[0], env.action_space.n, hyperParams)
     if(testing):
         policy.load_state_dict(torch.load('./trained_networks/'+module+'_REINFORCE.n'))
         policy.eval()
@@ -79,7 +84,7 @@ if __name__ == '__main__':
             
             # If done, batch data
             if done:
-                batch_rewards.extend(discount_rewards(rewards))
+                batch_rewards.extend(discount_rewards(rewards, hyperParams.GAMMA))
                 batch_states.extend(states)
                 batch_actions.extend(actions)
                 batch_counter += 1
