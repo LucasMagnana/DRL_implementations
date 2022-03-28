@@ -2,6 +2,7 @@ import argparse
 import sys
 import gym 
 import pickle
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -34,14 +35,8 @@ if __name__ == '__main__':
         agent = DDQNAgent(env.action_space, env.observation_space, cuda=cuda)
 
     tab_sum_rewards = []
-    
-    print("start:", dt.datetime.now())
 
     for e in range(1, hyperParams.EPISODE_COUNT):
-
-        if(e%(hyperParams.EPISODE_COUNT//4) == 0):
-            print("1/4:", dt.datetime.now())
-
         ob = env.reset()
         sum_rewards=0
         steps=0
@@ -59,8 +54,11 @@ if __name__ == '__main__':
                     agent.learn(steps)
                 tab_sum_rewards.append(sum_rewards)      
                 break
+
+        print("\rEp: {} Average of last 100: {:.2f}".format(e, np.mean(tab_sum_rewards[-100:])), end="")
+        if(np.mean(tab_sum_rewards[-100:]) > 300):
+            break
           
-    print("end:", dt.datetime.now())
 
     
     #plot the sums of rewards and the noise (noise shouldnt be in the same graph but for now it's good)
@@ -68,10 +66,6 @@ if __name__ == '__main__':
     plt.plot(tab_sum_rewards, linewidth=1)
     plt.ylabel('Sum of the rewards')       
     plt.savefig("./images/"+module+".png")
-
-    avg_last_sum_rewards = sum(tab_sum_rewards[-100:])/100
-
-    print("Average last 100 sums of reward:", avg_last_sum_rewards)
     
     #save the neural networks of the agent
     print("Saving...")
@@ -81,11 +75,6 @@ if __name__ == '__main__':
     #save the hyper parameters (for the tests and just in case)
     with open('./trained_networks/'+module+'.hp', 'wb') as outfile:
         pickle.dump(hyperParams, outfile)
-
-
-    if("monresovelo" in module): #tests only work for the custom env (so will the project in the end)
-        test()
-
 
     # Close the env (only useful for the gym envs for now)
     env.close()

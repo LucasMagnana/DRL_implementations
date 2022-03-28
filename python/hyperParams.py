@@ -31,12 +31,12 @@ class DDQNHyperParams :
     def __init__(self):
         self.BUFFER_SIZE = 1e25 
         self.ALPHA = 0.05 #
-        self.GAMMA = 0.9
-        self.LR = 0.001
-        self.BATCH_SIZE = 32
+        self.GAMMA = 0.99
+        self.LR = 0.01
+        self.BATCH_SIZE = 10
 
-        self.HIDDEN_SIZE = 32
-        self.ACT_INTER = 32
+        self.HIDDEN_SIZE = 16
+        self.ACT_INTER = 16
 
         self.EPISODE_COUNT = 3000
         self.MAX_STEPS = 1000
@@ -47,7 +47,7 @@ class DDQNHyperParams :
         self.EPSILON_DECAY = self.EPSILON/(self.EPISODE_COUNT*4/5)
 
 
-module = "LunarLanderContinuous-v2" #"CartPole-v1"
+module = "CartPole-v1" #"LunarLanderContinuous-v2"
 
 if("Continuous" in module):
     hyperParams = TD3HyperParams()
