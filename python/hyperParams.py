@@ -63,7 +63,6 @@ class REINFORCEHyperParams :
 class PPOHyperParams :
     def __init__(self):
         self.LR = 0.01
-        self.BATCH_SIZE = 10
         self.GAMMA = 0.99
         self.LAMBDA = 0.99
         self.EPSILON = 0.2
@@ -71,7 +70,7 @@ class PPOHyperParams :
         self.EPISODE_COUNT = 30
         self.NUM_AGENTS = 5
         self.NUM_EP_ENV = 5
-        self.K = 3
+        self.K = 4
 
         self.HIDDEN_SIZE = 32
         self.MAX_STEPS = 1000
