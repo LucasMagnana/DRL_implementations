@@ -68,14 +68,12 @@ class PPOHyperParams :
         self.LAMBDA = 0.99
         self.EPSILON = 0.2
 
-        self.EPISODE_COUNT = 60
+        self.EPISODE_COUNT = 30
         self.NUM_AGENTS = 5
-        self.NUM_EP_ENV = 10
-        self.K = 5
+        self.NUM_EP_ENV = 5
+        self.K = 3
 
-        self.HIDDEN_SIZE = 16
-        self.ACT_INTER = 16
-
+        self.HIDDEN_SIZE = 32
         self.MAX_STEPS = 1000
 
 module = "CartPole-v1" #"LunarLanderContinuous-v2"
