@@ -60,32 +60,22 @@ class REINFORCE_Model(nn.Module):
 
 
 
-class PPO_Actor(nn.Module):
+class PPO_Model(nn.Module):
     def __init__(self, size_ob, size_action, hyperParams):
-        super(PPO_Actor, self).__init__()
-        self.act_inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE)
-        self.act_out = nn.Linear(hyperParams.HIDDEN_SIZE, size_action)
-        self.sm = nn.Softmax(dim=-1)
+        super(PPO_Model, self).__init__()
+        self.shared = nn.Sequential(
+            nn.Linear(size_ob, hyperParams.HIDDEN_SIZE), nn.ReLU(),
+            nn.Linear(hyperParams.HIDDEN_SIZE, hyperParams.HIDDEN_SIZE), nn.ReLU())
+
+        self.actor = nn.Sequential(
+            nn.Linear(hyperParams.HIDDEN_SIZE, size_action), nn.Softmax(dim=-1))
+
+        self.critic = nn.Linear(hyperParams.HIDDEN_SIZE, 1)
     
     def forward(self, ob):
         ob = ob.float()
-        act_out = nn.functional.relu(self.act_inp(ob))
-        act_out = self.sm(self.act_out(act_out))
-
-        return act_out
-
-
-class PPO_Critic(nn.Module):
-    def __init__(self, size_ob, hyperParams):
-        super(PPO_Critic, self).__init__()
-        self.crit_inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE)
-        self.crit_out = nn.Linear(hyperParams.HIDDEN_SIZE, 1)
-    
-    def forward(self, ob):
-        ob = ob.float()
-        crit_out = nn.functional.relu(self.crit_inp(ob))
-        crit_out = self.crit_out(crit_out)
-        return crit_out
+        out = self.shared(ob)
+        return self.actor(out), self.critic(out)
 
 
 

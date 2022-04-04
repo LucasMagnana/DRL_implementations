@@ -75,4 +75,7 @@ class PPOHyperParams :
         self.HIDDEN_SIZE = 32
         self.MAX_STEPS = 1000
 
+        self.COEFF_CRITIC_LOSS = 0.5
+        self.COEFF_ENTROPY_LOSS = 0.01
+    
 module = "CartPole-v1" #"LunarLanderContinuous-v2"

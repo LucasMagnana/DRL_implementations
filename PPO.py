@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 import datetime as dt
 
-from python.NeuralNetworks import PPO_Actor, PPO_Critic
+from python.NeuralNetworks import PPO_Model
 from python.hyperParams import PPOHyperParams, module
 
 def discount_rewards(rewards, gamma):
@@ -49,22 +49,17 @@ def gae(rewards, values, episode_ends, gamma, lam):
 
 class PPOAgent():
 
-    def __init__(self, hyperParams, ob_space, ac_space, actor_to_load, critic_to_load):
+    def __init__(self, hyperParams, ob_space, ac_space, model_to_load):
 
         self.hyperParams = hyperParams
-        self.old_actor = PPO_Actor(env.observation_space.shape[0], env.action_space.n, hyperParams)
-        self.critic = PPO_Critic(env.observation_space.shape[0], hyperParams)
+        self.model = PPO_Model(env.observation_space.shape[0], env.action_space.n, hyperParams)
 
-        if(actor_to_load != None and critic_to_load != None):
-            self.old_actor.load_state_dict(torch.load(actor_to_load))
-            self.old_actor.eval()
-            self.critic.load_state_dict(torch.load(critic_to_load))
-            self.critic.eval()
-        else:
-            self.actor = copy.deepcopy(self.old_actor)   
+        if(model_to_load != None):
+            self.model.load_state_dict(torch.load(model_to_load))
+            self.model.eval()
+        else: 
             # Define optimizer
-            self.optimizer_actor = torch.optim.Adam(self.actor.parameters(), lr=self.hyperParams.LR)
-            self.optimizer_critic = torch.optim.Adam(self.critic.parameters(), lr=self.hyperParams.LR)
+            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hyperParams.LR)
             self.mse = torch.nn.MSELoss()
 
         self.avg_rewards = []
@@ -81,17 +76,18 @@ class PPOAgent():
         self.batch_states = []
         self.batch_values = []
         self.batch_actions = []
+        self.batch_selected_probs = []
         self.batch_done = []
 
 
     def learn(self):
 
         for k in range(self.hyperParams.K):
-            self.optimizer_actor.zero_grad()
-            self.optimizer_critic.zero_grad()
+            self.optimizer.zero_grad()
 
             state_tensor = torch.tensor(self.batch_states)
             advantages_tensor = torch.tensor(self.batch_advantages)
+            selected_probs_tensor = torch.tensor(self.batch_selected_probs)
 
             values_tensor = torch.tensor(self.batch_values)
             rewards_tensor = torch.tensor(self.batch_rewards, requires_grad = True)
@@ -103,32 +99,32 @@ class PPOAgent():
 
             
             # Calculate actor loss
-            probs = self.actor(state_tensor)
+            probs, values = self.model(state_tensor)
             selected_probs = torch.index_select(probs, 1, action_tensor).diag()
+            values = values.flatten()
 
-            old_probs = self.old_actor(state_tensor)
-            selected_old_probs = torch.index_select(old_probs, 1, action_tensor).diag()
-
-            loss = selected_probs/selected_old_probs*advantages_tensor
-            clipped_loss = torch.clamp(selected_probs/selected_old_probs, 1-self.hyperParams.EPSILON, 1+self.hyperParams.EPSILON)*advantages_tensor
+            loss = selected_probs/selected_probs_tensor*advantages_tensor
+            clipped_loss = torch.clamp(selected_probs/selected_probs_tensor, 1-self.hyperParams.EPSILON, 1+self.hyperParams.EPSILON)*advantages_tensor
 
             loss_actor = -torch.min(loss, clipped_loss).mean()
 
-
-
-            # Calculate gradients
-            loss_actor.backward()
-            # Apply gradients
-            self.optimizer_actor.step()
-
             # Calculate critic loss
-            loss_critic = self.mse(values_tensor, rewards_tensor)  
-            # Calculate gradients
-            loss_critic.backward()
-            # Apply gradients
-            self.optimizer_critic.step()
+            value_pred_clipped = values_tensor + (values - values_tensor).clamp(-self.hyperParams.EPSILON, self.hyperParams.EPSILON)
+            value_losses = (values - rewards_tensor) ** 2
+            value_losses_clipped = (value_pred_clipped - rewards_tensor) ** 2
 
-        self.old_actor = copy.deepcopy(self.actor)
+            loss_critic = 0.5 * torch.max(value_losses, value_losses_clipped)
+            loss_critic = loss_critic.mean() 
+
+            entropy_loss = torch.mean(torch.distributions.Categorical(probs = probs).entropy())
+
+            loss = loss_actor + self.hyperParams.COEFF_CRITIC_LOSS * loss_critic -  self.hyperParams.COEFF_ENTROPY_LOSS * entropy_loss
+
+
+            # Calculate gradients
+            loss.backward()
+            # Apply gradients
+            self.optimizer.step()
 
 
     def act(self, env, render=False):
@@ -139,6 +135,7 @@ class PPOAgent():
             rewards = []
             actions = []
             values = []
+            selected_probs = []
             list_done = []
             done = False
             step=1
@@ -146,8 +143,9 @@ class PPOAgent():
                 if(render):
                     env.render()
                 # Get actions and convert to numpy array
-                action_probs = self.old_actor(torch.tensor(ob_prec)).detach().numpy()
-                val = self.critic(torch.tensor(ob_prec)).detach().numpy()
+                action_probs, val = self.model(torch.tensor(ob_prec))
+                action_probs = action_probs.detach().numpy()
+                val = val.detach().numpy()
                 action = np.random.choice(np.arange(env.action_space.n), p=action_probs)
                 ob, r, done, _ = env.step(action)
 
@@ -155,6 +153,7 @@ class PPOAgent():
                 values.extend(val)
                 rewards.append(r)
                 actions.append(action)
+                selected_probs.append(action_probs[action])
                 list_done.append(done)  
 
                 ob_prec = ob
@@ -167,6 +166,7 @@ class PPOAgent():
             self.batch_values.extend(values)
             self.batch_actions.extend(actions)
             self.batch_done.extend(list_done)
+            self.batch_selected_probs.extend(selected_probs)
 
             self.total_rewards.append(sum(rewards))
             ar = np.mean(self.total_rewards[-100:])
@@ -188,8 +188,7 @@ if __name__ == '__main__':
 
     hyperParams = PPOHyperParams()
 
-    actor_to_load=None
-    critic_to_load=None
+    model_to_load=None
 
     if(len(sys.argv) > 1):
         if(sys.argv[1] == "--test"):
@@ -197,15 +196,14 @@ if __name__ == '__main__':
             with open('./trained_networks/'+module+'_PPO.hp', 'rb') as infile:
                 hyperParams = pickle.load(infile)
 
-            actor_to_load='./trained_networks/'+module+'_ac_PPO.n'
-            critic_to_load='./trained_networks/'+module+'_cr_PPO.n'
+            model_to_load='./trained_networks/'+module+'_PPO.n'
 
             hyperParams.EPISODE_COUNT=1
             hyperParams.NUM_AGENTS=1
             hyperParams.K=0
             hyperParams.NUM_EP_ENV=1
 
-    ppo_agent = PPOAgent(hyperParams, env.observation_space.shape[0], env.action_space.n, actor_to_load, critic_to_load)
+    ppo_agent = PPOAgent(hyperParams, env.observation_space.shape[0], env.action_space.n, model_to_load)
 
     for ep in range(hyperParams.EPISODE_COUNT):
         # Set up lists to hold results
@@ -237,8 +235,7 @@ if __name__ == '__main__':
         plt.savefig("./images/"+module+"_PPO.png")
         
         #save the neural networks of the policy
-        torch.save(ppo_agent.old_actor.state_dict(), './trained_networks/'+module+'_ac_PPO.n')
-        torch.save(ppo_agent.critic.state_dict(), './trained_networks/'+module+'_cr_PPO.n')
+        torch.save(ppo_agent.model.state_dict(), './trained_networks/'+module+'_PPO.n')
 
         #save the hyper parameters (for the tests and just in case)
         with open('./trained_networks/'+module+'_PPO.hp', 'wb') as outfile:
