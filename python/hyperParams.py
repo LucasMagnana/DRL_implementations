@@ -72,6 +72,8 @@ class PPOHyperParams :
         self.NUM_EP_ENV = 5
         self.K = 4
 
+        self.KERNEL_SIZE = 5
+        self.STRIDE = 2
         self.HIDDEN_SIZE = 32
         self.MAX_STEPS = 1000
 
