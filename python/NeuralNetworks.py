@@ -97,7 +97,7 @@ class PPO_Model_CNN(nn.Module):
             return (size - (kernel_size - 1) - 1) // stride  + 1
         convw = conv2d_size_out(conv2d_size_out(conv2d_size_out(w)))
         convh = conv2d_size_out(conv2d_size_out(conv2d_size_out(h)))
-        linear_input_size = convw * convh * hyperParamsHIDDEN_SIZE
+        linear_input_size = convw * convh * hyperParams.HIDDEN_SIZE
 
         self.actor = nn.Sequential(
             nn.Linear(linear_input_size, size_action),
@@ -109,7 +109,7 @@ class PPO_Model_CNN(nn.Module):
         ob = ob.float()
         out = self.shared(ob)
         out = out.flatten(1)
-        return self.actor(out), self.critic(out)
+        return self.actor(out).squeeze(), self.critic(out)
 
 
 

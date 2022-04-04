@@ -2,9 +2,53 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-import torch
+from collections import namedtuple, deque
+from itertools import count
+from PIL import Image
 
-from python.NeuralNetworks import PPO_Model
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import torchvision.transforms as T
+
+from python.NeuralNetworks import PPO_Model, PPO_Model_CNN
+
+resize = T.Compose([T.ToPILImage(),
+                    T.Resize(40, interpolation=Image.CUBIC),
+                    T.ToTensor()])
+
+
+def get_cart_location(screen_width, env):
+    world_width = env.x_threshold * 2
+    scale = screen_width / world_width
+    return int(env.state[0] * scale + screen_width / 2.0)  # MIDDLE OF CART
+
+def get_screen(env):
+    # Returned screen requested by gym is 400x600x3, but is sometimes larger
+    # such as 800x1200x3. Transpose it into torch order (CHW).
+    screen = env.render(mode='rgb_array').transpose((2, 0, 1))
+    # Cart is in the lower half, so strip off the top and bottom of the screen
+    _, screen_height, screen_width = screen.shape
+    screen = screen[:, int(screen_height*0.4):int(screen_height * 0.8)]
+    view_width = int(screen_width * 0.6)
+    cart_location = get_cart_location(screen_width, env)
+    if cart_location < view_width // 2:
+        slice_range = slice(view_width)
+    elif cart_location > (screen_width - view_width // 2):
+        slice_range = slice(-view_width, None)
+    else:
+        slice_range = slice(cart_location - view_width // 2,
+                            cart_location + view_width // 2)
+    # Strip off the edges, so that we have a square image centered on a cart
+    screen = screen[:, :, slice_range]
+    # Convert to float, rescale, convert to torch tensor
+    # (this doesn't require a copy)
+    screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
+    screen = torch.from_numpy(screen)
+    # Resize, and add a batch dimension (BCHW)
+    return resize(screen).unsqueeze(0)
+
 
 def discount_rewards(rewards, gamma):
     r = np.array([gamma**i * rewards[i] for i in range(len(rewards))])
@@ -42,10 +86,15 @@ def gae(rewards, values, episode_ends, gamma, lam):
 
 class PPOAgent():
 
-    def __init__(self, hyperParams, ob_space, ac_space, model_to_load):
+    def __init__(self, hyperParams, ob_space, ac_space, model_to_load, cnn=False):
 
         self.hyperParams = hyperParams
-        self.model = PPO_Model(ob_space, ac_space, hyperParams)
+        self.cnn = cnn
+
+        if(self.cnn):
+            self.model = PPO_Model_CNN(ob_space[0], ob_space[1], ac_space, hyperParams)
+        else:
+            self.model = PPO_Model(ob_space, ac_space, hyperParams)
 
         if(model_to_load != None):
             self.model.load_state_dict(torch.load(model_to_load))
@@ -77,12 +126,18 @@ class PPOAgent():
 
         for k in range(self.hyperParams.K):
             self.optimizer.zero_grad()
+            
+            if(self.cnn):
+                state_tensor = torch.stack(self.batch_states).squeeze()
+            else:
+                state_tensor = torch.tensor(self.batch_states)
 
-            state_tensor = torch.tensor(self.batch_states)
+            #print(state_tensor.tolist() == self.batch_states)
+
             advantages_tensor = torch.tensor(self.batch_advantages)
-            selected_probs_tensor = torch.tensor(self.batch_selected_probs)
+            old_selected_probs_tensor = torch.tensor(self.batch_selected_probs)
 
-            values_tensor = torch.tensor(self.batch_values)
+            old_values_tensor = torch.tensor(self.batch_values)
             rewards_tensor = torch.tensor(self.batch_rewards, requires_grad = True)
             rewards_tensor = rewards_tensor.float()
             # Actions are used as indices, must be 
@@ -92,18 +147,18 @@ class PPOAgent():
 
             
             # Calculate actor loss
-            probs, values = self.model(state_tensor)
-            selected_probs = torch.index_select(probs, 1, action_tensor).diag()
-            values = values.flatten()
+            probs, values_tensor = self.model(state_tensor)
+            selected_probs_tensor = torch.index_select(probs, 1, action_tensor).diag()
+            values_tensor = values_tensor.flatten()
 
-            loss = selected_probs/selected_probs_tensor*advantages_tensor
-            clipped_loss = torch.clamp(selected_probs/selected_probs_tensor, 1-self.hyperParams.EPSILON, 1+self.hyperParams.EPSILON)*advantages_tensor
+            loss = selected_probs_tensor/old_selected_probs_tensor*advantages_tensor
+            clipped_loss = torch.clamp(selected_probs_tensor/old_selected_probs_tensor, 1-self.hyperParams.EPSILON, 1+self.hyperParams.EPSILON)*advantages_tensor
 
             loss_actor = -torch.min(loss, clipped_loss).mean()
 
             # Calculate critic loss
-            value_pred_clipped = values_tensor + (values - values_tensor).clamp(-self.hyperParams.EPSILON, self.hyperParams.EPSILON)
-            value_losses = (values - rewards_tensor) ** 2
+            value_pred_clipped = old_values_tensor + (values_tensor - old_values_tensor).clamp(-self.hyperParams.EPSILON, self.hyperParams.EPSILON)
+            value_losses = (values_tensor - rewards_tensor) ** 2
             value_losses_clipped = (value_pred_clipped - rewards_tensor) ** 2
 
             loss_critic = 0.5 * torch.max(value_losses, value_losses_clipped)
@@ -123,13 +178,20 @@ class PPOAgent():
     def act(self, env, render=False):
 
         for y in range(self.hyperParams.NUM_EP_ENV):
-            ob_prec = env.reset()
             states = []
             rewards = []
             actions = []
             values = []
             selected_probs = []
             list_done = []
+
+            if(self.cnn):
+                env.reset()
+                last_screen = get_screen(env)
+                current_screen = get_screen(env)
+                ob_prec = current_screen - last_screen
+            else:
+                ob_prec = env.reset()
             done = False
             step=1
             while(not done and step<self.hyperParams.MAX_STEPS):
@@ -148,6 +210,9 @@ class PPOAgent():
                 actions.append(action)
                 selected_probs.append(action_probs[action])
                 list_done.append(done)  
+
+                if(self.cnn):
+                    ob = get_screen(env)
 
                 ob_prec = ob
                 step+=1                

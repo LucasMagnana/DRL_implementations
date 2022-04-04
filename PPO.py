@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 
 import datetime as dt
 
+from collections import namedtuple, deque
+from itertools import count
+from PIL import Image
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -17,15 +21,21 @@ import torchvision.transforms as T
 
 from python.NeuralNetworks import PPO_Model
 from python.hyperParams import PPOHyperParams, module
-from python.PPOAgent import PPOAgent
+from python.PPOAgent import PPOAgent, get_screen
+
+import time
+
 
 
 
 if __name__ == '__main__':
-    env = gym.make(module) #gym env
-
+    env = gym.make(module).unwrapped #gym env
+    env.reset()
     list_envs = []
-    testing = False
+
+    testing=False
+    cnn = True
+    
 
     hyperParams = PPOHyperParams()
 
@@ -44,7 +54,12 @@ if __name__ == '__main__':
             hyperParams.K=0
             hyperParams.NUM_EP_ENV=1
 
-    ppo_agent = PPOAgent(hyperParams, env.observation_space.shape[0], env.action_space.n, model_to_load)
+    if(cnn):
+        init_screen = get_screen(env)
+        _, _, screen_height, screen_width = init_screen.shape
+        ppo_agent = PPOAgent(hyperParams, (screen_width, screen_height), env.action_space.n, model_to_load, cnn)
+    else:
+        ppo_agent = PPOAgent(hyperParams, env.observation_space.shape[0], env.action_space.n, model_to_load)
 
     for ep in range(hyperParams.EPISODE_COUNT):
         # Set up lists to hold results
