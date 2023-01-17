@@ -30,13 +30,13 @@ class TD3HyperParams :
 class DQNHyperParams :
     def __init__(self):
         self.BUFFER_SIZE = 1e9
-        self.ALPHA = 0.05 #
+        self.ALPHA = 0.05 
         self.GAMMA = 0.99
         self.LR = 0.01
         self.BATCH_SIZE = 10
 
-        self.HIDDEN_SIZE = 16
-        self.ACT_INTER = 16
+        self.HIDDEN_SIZE_1 = 16
+        self.HIDDEN_SIZE_2 = 16
 
         self.EPISODE_COUNT = 3000
         self.MAX_STEPS = 1000

@@ -9,10 +9,9 @@ class Actor(nn.Module):
 
     def __init__(self, size_ob, size_action, hyperParams, max_action=1, tanh=False): #for saved hyperparameters
         super(Actor, self).__init__()
-        print(hyperParams)
-        self.inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE)
-        self.int = nn.Linear(hyperParams.HIDDEN_SIZE, hyperParams.ACT_INTER)
-        self.out = nn.Linear(hyperParams.ACT_INTER, size_action)
+        self.inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE_1)
+        self.int = nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2)
+        self.out = nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action)
         self.max_action = max_action
         self.tanh = tanh
 
@@ -24,6 +23,34 @@ class Actor(nn.Module):
             return torch.tanh(self.out(out)*self.max_action)
         else:
             return self.out(out)*self.max_action
+
+
+
+class DuellingActor(nn.Module):
+
+    def __init__(self, size_ob, size_action, hyperParams, max_action=1, tanh=False): #for saved hyperparameters
+        super(DuellingActor, self).__init__()
+
+        self.inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE_1)
+        self.feature_out = nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2)
+
+        self.advantage_out = nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action)
+
+        self.value_out = nn.Linear(hyperParams.HIDDEN_SIZE_2, 1)
+
+        self.max_action = max_action
+        self.tanh = tanh
+
+    def forward(self, ob):
+        ob = ob.float()
+        features = nn.functional.relu(self.inp(ob))
+        features = nn.functional.relu(self.feature_out(features))
+
+        values = self.value_out(features)
+
+        advantages = self.advantage_out(features)
+
+        return values + (advantages - advantages.mean())
 
 
 

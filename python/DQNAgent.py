@@ -11,10 +11,10 @@ import copy
 import numpy as np
 import torch
 
-from python.NeuralNetworks import Actor
+from python.NeuralNetworks import Actor, DuellingActor
 
 class DQNAgent(object):
-    def __init__(self, action_space, observation_space, hyperParams, test=False, double=True, dual=False, PER=True, cuda=False, actor_to_load=None):
+    def __init__(self, action_space, observation_space, hyperParams, test=False, double=True, duelling=True, PER=False, cuda=False, actor_to_load=None):
 
         self.hyperParams = hyperParams
         
@@ -36,7 +36,11 @@ class DQNAgent(object):
 
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.actor = Actor(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) #for cartpole
+        self.duelling = duelling
+        if(self.duelling):
+            self.actor = DuellingActor(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) #for cartpole
+        else:
+            self.actor = Actor(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) #for cartpole
 
         self.batch_size = self.hyperParams.BATCH_SIZE
 
@@ -52,7 +56,7 @@ class DQNAgent(object):
         self.observation_space = observation_space
 
         self.double = double
-        self.dual = dual
+        
         
 
 
