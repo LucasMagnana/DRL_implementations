@@ -186,12 +186,12 @@ class PPOAgent():
             list_done = []
 
             if(self.cnn):
-                env.reset()
+                env.reset()[0]
                 last_screen = get_screen(env)
                 current_screen = get_screen(env)
                 ob_prec = current_screen - last_screen
             else:
-                ob_prec = env.reset()
+                ob_prec = env.reset()[0]
             done = False
             step=1
             while(not done and step<self.hyperParams.MAX_STEPS):
@@ -202,7 +202,7 @@ class PPOAgent():
                 action_probs = action_probs.detach().numpy()
                 val = val.detach().numpy()
                 action = np.random.choice(np.arange(env.action_space.n), p=action_probs)
-                ob, r, done, _ = env.step(action)
+                ob, r, done, _, _ = env.step(action)
 
                 states.append(ob_prec)
                 values.extend(val)

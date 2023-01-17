@@ -29,17 +29,17 @@ import time
 
 
 if __name__ == '__main__':
-    env = gym.make(module).unwrapped #gym env
-    env.reset()
     list_envs = []
 
     testing=False
-    cnn = True
+    cnn = False
     
 
     hyperParams = PPOHyperParams()
 
     model_to_load=None
+
+    env = gym.make(module).unwrapped
 
     if(len(sys.argv) > 1):
         if(sys.argv[1] == "--test"):
@@ -53,6 +53,11 @@ if __name__ == '__main__':
             hyperParams.NUM_AGENTS=1
             hyperParams.K=0
             hyperParams.NUM_EP_ENV=1
+
+            env = gym.make(module, render_mode="human").unwrapped #gym env
+
+    env.reset()
+    env.reset()
 
     if(cnn):
         init_screen = get_screen(env)
