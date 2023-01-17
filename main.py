@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 
 from python.TD3Agent import *
-from python.DDQNAgent import *
+from python.DQNAgent import *
 from python.hyperParams import *
 
 from test import test
@@ -32,14 +32,13 @@ if __name__ == '__main__':
         hyperParams = TD3HyperParams()     
         agent = TD3Agent(env.action_space, env.observation_space, hyperParams, cuda=cuda)
     else:
-        hyperParams = DDQNHyperParams()
-        agent = DDQNAgent(env.action_space, env.observation_space, hyperParams, cuda=cuda)
+        hyperParams = DQNHyperParams()
+        agent = DQNAgent(env.action_space, env.observation_space, hyperParams, cuda=cuda)
 
     tab_sum_rewards = []
     tab_mean_rewards = []
-
     for e in range(1, hyperParams.EPISODE_COUNT):
-        ob = env.reset()
+        ob = env.reset()[0]
         sum_rewards=0
         steps=0
         while True:
@@ -47,7 +46,7 @@ if __name__ == '__main__':
                 env.render()
             ob_prec = ob   
             action = agent.act(ob)
-            ob, reward, done, _ = env.step(action)
+            ob, reward, done, _, _ = env.step(action)
             agent.memorize(ob_prec, action, ob, reward, done)
             sum_rewards += reward
             steps+=1

@@ -27,9 +27,9 @@ class TD3HyperParams :
 
 
 #Cartpole hyper parameters (solves it but not optimal)
-class DDQNHyperParams :
+class DQNHyperParams :
     def __init__(self):
-        self.BUFFER_SIZE = 1e25 
+        self.BUFFER_SIZE = 1e9
         self.ALPHA = 0.05 #
         self.GAMMA = 0.99
         self.LR = 0.01
