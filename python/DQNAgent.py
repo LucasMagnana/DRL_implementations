@@ -14,7 +14,7 @@ import torch
 from python.NeuralNetworks import Actor, DuellingActor
 
 class DQNAgent(object):
-    def __init__(self, action_space, observation_space, hyperParams, test=False, double=True, duelling=True, PER=False, cuda=False, actor_to_load=None):
+    def __init__(self, observation_space, action_space, hyperParams, test=False, double=True, duelling=True, PER=False, cuda=False, actor_to_load=None):
 
         self.hyperParams = hyperParams
         

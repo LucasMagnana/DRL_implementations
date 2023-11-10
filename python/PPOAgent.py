@@ -10,9 +10,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import torchvision.transforms as T
+from torch.distributions.multivariate_normal import MultivariateNormal
 
-from python.NeuralNetworks import PPO_Model, PPO_Model_CNN
+from python.NeuralNetworks import PPO_Actor, PPO_Critic
+
+'''
+import torchvision.transforms as T
 
 resize = T.Compose([T.ToPILImage(),
                     T.Resize(40, interpolation=Image.CUBIC),
@@ -48,13 +51,24 @@ def get_screen(env):
     screen = torch.from_numpy(screen)
     # Resize, and add a batch dimension (BCHW)
     return resize(screen).unsqueeze(0)
-
+'''
 
 def discount_rewards(rewards, gamma):
     r = np.array([gamma**i * rewards[i] for i in range(len(rewards))])
     # Reverse the array direction for cumsum and then
     # revert back to the original order
     r = r[::-1].cumsum()[::-1]
+    return r - r.mean()
+
+
+def discount_rewards(rewards, list_done, gamma):
+    r = []
+    for reward, done in zip(reversed(rewards), reversed(list_done)):
+        if done:
+            discounted_reward = 0
+        discounted_reward = reward + (gamma * discounted_reward)
+        r.insert(0, discounted_reward)
+    r = np.array(r, dtype=np.single)
     return r - r.mean()
 
 
@@ -84,30 +98,44 @@ def gae(rewards, values, episode_ends, gamma, lam):
     return advantages
 
 
+
+
 class PPOAgent():
 
-    def __init__(self, hyperParams, ob_space, ac_space, model_to_load, cnn=False):
+    def __init__(self, ob_space, ac_space, hyperParams, model_to_load=None, continuous_action_space=False):
 
         self.hyperParams = hyperParams
-        self.cnn = cnn
 
-        if(self.cnn):
-            self.model = PPO_Model_CNN(ob_space[0], ob_space[1], ac_space, hyperParams)
+        self.continuous_action_space = continuous_action_space
+
+
+        if(self.continuous_action_space):
+            self.ac_space = ac_space.shape[0]
+            self.actor = PPO_Actor(ob_space, self.ac_space, hyperParams, max_action=ac_space.high[0])
         else:
-            self.model = PPO_Model(ob_space, ac_space, hyperParams)
+            self.ac_space = ac_space.n  
+            self.actor = PPO_Actor(ob_space, self.ac_space, hyperParams)
 
         if(model_to_load != None):
-            self.model.load_state_dict(torch.load(model_to_load))
-            self.model.eval()
-        else: 
-            # Define optimizer
-            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.hyperParams.LR)
-            self.mse = torch.nn.MSELoss()
+            self.actor.load_state_dict(torch.load(model_to_load))
+            self.actor.eval()
 
-        self.avg_rewards = []
-        self.total_rewards = []
 
-        self.ep = 0
+        self.critic = PPO_Critic(ob_space, hyperParams)
+
+        # Define optimizer
+        self.optimizer_actor = torch.optim.Adam(self.actor.parameters(), lr=self.hyperParams.LR)
+        self.optimizer_critic = torch.optim.Adam(self.critic.parameters(), lr=self.hyperParams.LR)
+        self.mse = torch.nn.MSELoss()
+
+        
+
+        if(self.continuous_action_space):
+            self.action_std = torch.full((self.ac_space,), 1/100)
+
+        self.num_decisions_made = 0
+
+        self.tab_losses = []
 
         self.reset_batches()
 
@@ -125,12 +153,8 @@ class PPOAgent():
     def learn(self):
 
         for k in range(self.hyperParams.K):
-            self.optimizer.zero_grad()
-            
-            if(self.cnn):
-                state_tensor = torch.stack(self.batch_states).squeeze()
-            else:
-                state_tensor = torch.tensor(self.batch_states)
+
+            state_tensor = torch.tensor(self.batch_states)
 
             #print(state_tensor.tolist() == self.batch_states)
 
@@ -138,99 +162,120 @@ class PPOAgent():
             old_selected_probs_tensor = torch.tensor(self.batch_selected_probs)
 
             old_values_tensor = torch.tensor(self.batch_values)
-            rewards_tensor = torch.tensor(self.batch_rewards, requires_grad = True)
-            rewards_tensor = rewards_tensor.float()
-            # Actions are used as indices, must be 
-            # LongTensor
-            action_tensor = torch.LongTensor(self.batch_actions)
-            action_tensor = action_tensor.long()
+
+            rewards_tensor = torch.tensor(self.batch_rewards)
+            # Normalizing the rewards:
+            #rewards_tensor = (rewards_tensor - rewards_tensor.mean()) / (rewards_tensor.std() + 1e-5)
+            
+
+            action_tensor = torch.tensor(self.batch_actions)
 
             
             # Calculate actor loss
-            probs, values_tensor = self.model(state_tensor)
-            selected_probs_tensor = torch.index_select(probs, 1, action_tensor).diag()
+            probs = self.actor(state_tensor)
+            values_tensor = self.critic(state_tensor)
+
             values_tensor = values_tensor.flatten()
 
-            loss = selected_probs_tensor/old_selected_probs_tensor*advantages_tensor
-            clipped_loss = torch.clamp(selected_probs_tensor/old_selected_probs_tensor, 1-self.hyperParams.EPSILON, 1+self.hyperParams.EPSILON)*advantages_tensor
+            if(self.continuous_action_space):
+                print(probs)
+                action_std = self.action_std.expand_as(probs)
+                mat_std = torch.diag_embed(action_std)
+                dist = MultivariateNormal(probs, mat_std)
+                selected_probs_tensor = dist.log_prob(action_tensor.flatten())
+                ratios = torch.exp(selected_probs_tensor - old_selected_probs_tensor.detach())
 
-            loss_actor = -torch.min(loss, clipped_loss).mean()
+            else:
+                # Actions are used as indices, must be 
+                # LongTensor
+                action_tensor = action_tensor.long()
+                selected_probs_tensor = torch.index_select(probs, 1, action_tensor).diag()
+                ratios = selected_probs_tensor/old_selected_probs_tensor
+
+            
+            #advantages_tensor = rewards_tensor - values_tensor.detach()   
+
+            loss_actor = ratios*advantages_tensor
+            clipped_loss_actor = torch.clamp(ratios, 1-self.hyperParams.EPSILON, 1+self.hyperParams.EPSILON)*advantages_tensor
+
+            loss_actor = -(torch.min(loss_actor, clipped_loss_actor).mean())
 
             # Calculate critic loss
-            value_pred_clipped = old_values_tensor + (values_tensor - old_values_tensor).clamp(-self.hyperParams.EPSILON, self.hyperParams.EPSILON)
+            '''value_pred_clipped = old_values_tensor + (values_tensor - old_values_tensor).clamp(-self.hyperParams.EPSILON, self.hyperParams.EPSILON)
             value_losses = (values_tensor - rewards_tensor) ** 2
             value_losses_clipped = (value_pred_clipped - rewards_tensor) ** 2
 
             loss_critic = 0.5 * torch.max(value_losses, value_losses_clipped)
-            loss_critic = loss_critic.mean() 
-
-            entropy_loss = torch.mean(torch.distributions.Categorical(probs = probs).entropy())
-
-            loss = loss_actor + self.hyperParams.COEFF_CRITIC_LOSS * loss_critic -  self.hyperParams.COEFF_ENTROPY_LOSS * entropy_loss
+            loss_critic = loss_critic.mean()''' 
 
 
+            loss_critic = self.mse(values_tensor, rewards_tensor)
+         
+
+
+            self.tab_losses.append((loss_actor.item()+loss_critic.item())/2)
+
+            #print("Loss :", self.tab_losses[-1])
+
+            # Reset gradients
+            self.optimizer_actor.zero_grad()
+            self.optimizer_critic.zero_grad()
             # Calculate gradients
-            loss.backward()
+            loss_actor.backward()
+            loss_critic.backward()
             # Apply gradients
-            self.optimizer.step()
+            self.optimizer_actor.step()
+            self.optimizer_critic.step()
+
+        self.reset_batches()
 
 
-    def act(self, env, render=False):
+    def memorize(self, ob_prec, val, action_probs, action, ob, reward, done):
+        self.states.append(ob_prec)
+        self.values.extend(val)
+        self.rewards.append(reward)
+        self.actions.append(action)
+        if(self.continuous_action_space):
+            self.selected_probs.append(action_probs.item())
+        else:
+            self.selected_probs.append(action_probs[action])
+        self.list_done.append(done)  
 
-        for y in range(self.hyperParams.NUM_EP_ENV):
-            states = []
-            rewards = []
-            actions = []
-            values = []
-            selected_probs = []
-            list_done = []
+    def start_episode(self):
+        self.states = []
+        self.rewards = []
+        self.actions = []
+        self.values = []
+        self.selected_probs = []
+        self.list_done = []
 
-            if(self.cnn):
-                env.reset()[0]
-                last_screen = get_screen(env)
-                current_screen = get_screen(env)
-                ob_prec = current_screen - last_screen
-            else:
-                ob_prec = env.reset()[0]
-            done = False
-            step=1
-            while(not done and step<self.hyperParams.MAX_STEPS):
-                if(render):
-                    env.render()
-                # Get actions and convert to numpy array
-                action_probs, val = self.model(torch.tensor(ob_prec))
-                action_probs = action_probs.detach().numpy()
-                val = val.detach().numpy()
-                action = np.random.choice(np.arange(env.action_space.n), p=action_probs)
-                ob, r, done, _, _ = env.step(action)
+    def end_episode(self):
+        self.list_done[-1] = True
+        self.batch_rewards.extend(discount_rewards(self.rewards, self.list_done, self.hyperParams.GAMMA))
+        gaes = gae(np.expand_dims(np.array(self.rewards), 0), np.expand_dims(np.array(self.values), 0), np.expand_dims(np.array([not elem for elem in self.list_done]), 0), self.hyperParams.GAMMA, self.hyperParams.LAMBDA)
+        self.batch_advantages.extend(gaes[0])
+        self.batch_states.extend(self.states)
+        self.batch_values.extend(self.values)
+        self.batch_actions.extend(self.actions)
+        self.batch_done.extend(self.list_done)
+        self.batch_selected_probs.extend(self.selected_probs)
 
-                states.append(ob_prec)
-                values.extend(val)
-                rewards.append(r)
-                actions.append(action)
-                selected_probs.append(action_probs[action])
-                list_done.append(done)  
 
-                if(self.cnn):
-                    ob = get_screen(env)
+    def act(self, observation):
+        # Get actions and convert to numpy array
+        action_probs = self.actor(torch.tensor(observation))
+        val = self.critic(torch.tensor(observation))
+        val = val.detach().numpy()
+        if(self.continuous_action_space):
+            std_mat = torch.diag(self.action_std)
+            dist = MultivariateNormal(action_probs, std_mat)
+            action = dist.sample()
+            action_probs = dist.log_prob(action).detach().numpy()
+            action = action.detach().numpy()
+        else:
+            action_probs = action_probs.detach().numpy()
+            action = np.random.choice(np.arange(self.ac_space), p=action_probs)
 
-                ob_prec = ob
-                step+=1                
+        self.num_decisions_made += 1
 
-            self.batch_rewards.extend(discount_rewards(rewards, self.hyperParams.GAMMA))
-            gaes = gae(np.expand_dims(np.array(rewards), 0), np.expand_dims(np.array(values), 0), np.expand_dims(np.array([not elem for elem in list_done]), 0), self.hyperParams.GAMMA, self.hyperParams.LAMBDA)
-            self.batch_advantages.extend(gaes[0])
-            self.batch_states.extend(states)
-            self.batch_values.extend(values)
-            self.batch_actions.extend(actions)
-            self.batch_done.extend(list_done)
-            self.batch_selected_probs.extend(selected_probs)
-
-            self.total_rewards.append(sum(rewards))
-            ar = np.mean(self.total_rewards[-100:])
-            self.avg_rewards.append(ar)
-
-            self.ep += 1
-
-            if(not render):
-                print("\rEp: {} Average of last 100: {:.2f}".format(self.ep, ar), end="")
+        return action, val, action_probs

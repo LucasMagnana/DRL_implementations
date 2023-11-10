@@ -62,22 +62,17 @@ class REINFORCEHyperParams :
 
 class PPOHyperParams :
     def __init__(self):
-        self.LR = 0.01
+        self.LR = 0.003
         self.GAMMA = 0.99
         self.LAMBDA = 0.99
         self.EPSILON = 0.2
 
-        self.EPISODE_COUNT = 30
-        self.NUM_AGENTS = 5
+        self.EPISODE_COUNT = 500
         self.NUM_EP_ENV = 5
         self.K = 4
 
-        self.KERNEL_SIZE = 5
-        self.STRIDE = 2
-        self.HIDDEN_SIZE = 32
         self.MAX_STEPS = 1000
+        self.HIDDEN_SIZE = 32
 
-        self.COEFF_CRITIC_LOSS = 0.5
-        self.COEFF_ENTROPY_LOSS = 0.01
     
-module = "CartPole-v1" #"LunarLanderContinuous-v2"
+module = "CartPole-v1"  #"LunarLanderContinuous-v2"
