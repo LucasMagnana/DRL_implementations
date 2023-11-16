@@ -30,7 +30,7 @@ class DQNAgent(object):
             else:
                 self.buffer = torchrl.data.ReplayBuffer(int(self.hyperParams.BUFFER_SIZE))
 
-        self.alpha = self.hyperParams.ALPHA
+        self.tau = self.hyperParams.TAU
         self.epsilon = self.hyperParams.EPSILON
         self.gamma = self.hyperParams.GAMMA
 
@@ -144,4 +144,4 @@ class DQNAgent(object):
         self.optimizer.step() #back-propagate the gradient
 
         for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()): #updates the target network
-            target_param.data.copy_(self.alpha * param + (1-self.alpha)*target_param )
+            target_param.data.copy_(self.tau * param + (1-self.tau)*target_param )

@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 
 class TD3Agent(object):
-    def __init__(self, action_space, observation_space, hyperParams, cuda=False):
+    def __init__(self, observation_space, action_space, hyperParams, cuda=False):
 
         self.hyperParams = hyperParams
 
@@ -66,14 +66,14 @@ class TD3Agent(object):
             self.buffer.pop(0)
         self.buffer.append([ob_prec, action, ob, reward, not(done)])
 
-    def learn(self, n_iter):
+    def learn(self):
         
-        for i in range(n_iter):
+        for i in range(5):
             
             spl = self.sample()
 
             tens_ob = torch.tensor([item[0] for item in spl], dtype=torch.float32, device=self.device)
-            tens_action = torch.tensor([item[1] for item in spl], dtype=torch.long, device=self.device)
+            tens_action = torch.tensor([item[1] for item in spl], dtype=torch.float32, device=self.device)
             tens_ob_next = torch.tensor([item[2] for item in spl], dtype=torch.float32, device=self.device)
             tens_reward = torch.tensor([item[3] for item in spl], dtype=torch.float32, device=self.device)
             tens_done = torch.tensor([item[4] for item in spl], dtype=torch.float32, device=self.device)

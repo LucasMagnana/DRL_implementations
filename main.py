@@ -44,10 +44,11 @@ if __name__ == '__main__':
         hyperParams = DQNHyperParams()
         agent = DQNAgent(env.observation_space, env.action_space, hyperParams, double=True, duelling=True)
     elif(args.algorithm == "TD3"):
-        agent = TD3Agent(env.action_space, env.observation_space, hyperParams, cuda=args.cuda)
+        hyperParams = TD3HyperParams()
+        agent = TD3Agent(env.observation_space, env.action_space, hyperParams, cuda=args.cuda)
     elif(args.algorithm == "PPO"):
         hyperParams = PPOHyperParams()
-        agent = PPOAgent(env.observation_space.shape[0], env.action_space, hyperParams, continuous_action_space=isinstance(env.action_space, gym.spaces.box.Box))
+        agent = PPOAgent(env.observation_space, env.action_space, hyperParams, continuous_action_space=isinstance(env.action_space, gym.spaces.box.Box))
 
     '''if("Continuous" in module): #agents are not the same wether the action space is continuous or discrete
         hyperParams = TD3HyperParams()     
@@ -77,14 +78,15 @@ if __name__ == '__main__':
                 ob, reward, done, _, _ = env.step(action)
                 agent.memorize(ob_prec, action, ob, reward, done)
             sum_rewards += reward
+            if(args.algorithm != "PPO" and steps%hyperParams.LEARN_EVERY == 0 and len(agent.buffer) > hyperParams.LEARNING_START):
+                agent.learn()
             steps+=1
             if done or steps > hyperParams.MAX_STEPS:
                 if(args.algorithm == "PPO"):
                     agent.end_episode()
-                if(args.algorithm == "PPO" and e > 0 and e%hyperParams.NUM_EP_ENV == 0):
-                    agent.learn()
-                if(args.algorithm != "PPO" and len(agent.buffer)>hyperParams.LEARNING_START):
-                    agent.learn()
+                    if(e > 0 and e%hyperParams.NUM_EP_ENV == 0):
+                        agent.learn()
+
                 tab_sum_rewards.append(sum_rewards)   
                 tab_mean_rewards.append(np.mean(tab_sum_rewards[-100:]))   
                 break

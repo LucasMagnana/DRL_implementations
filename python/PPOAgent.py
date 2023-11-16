@@ -111,17 +111,17 @@ class PPOAgent():
 
         if(self.continuous_action_space):
             self.ac_space = ac_space.shape[0]
-            self.actor = PPO_Actor(ob_space, self.ac_space, hyperParams, max_action=ac_space.high[0])
+            self.actor = PPO_Actor(ob_space.shape[0], self.ac_space, hyperParams, max_action=ac_space.high[0])
         else:
             self.ac_space = ac_space.n  
-            self.actor = PPO_Actor(ob_space, self.ac_space, hyperParams)
+            self.actor = PPO_Actor(ob_space.shape[0], self.ac_space, hyperParams)
 
         if(model_to_load != None):
             self.actor.load_state_dict(torch.load(model_to_load))
             self.actor.eval()
 
 
-        self.critic = PPO_Critic(ob_space, hyperParams)
+        self.critic = PPO_Critic(ob_space.shape[0], hyperParams)
 
         # Define optimizer
         self.optimizer_actor = torch.optim.Adam(self.actor.parameters(), lr=self.hyperParams.LR)
@@ -148,6 +148,7 @@ class PPOAgent():
         self.batch_actions = []
         self.batch_selected_probs = []
         self.batch_done = []
+        self.batch_stds = []
 
 
     def learn(self):
@@ -172,22 +173,20 @@ class PPOAgent():
 
             
             # Calculate actor loss
-            probs = self.actor(state_tensor)
             values_tensor = self.critic(state_tensor)
-
             values_tensor = values_tensor.flatten()
 
             if(self.continuous_action_space):
-                print(probs)
-                action_std = self.action_std.expand_as(probs)
+                action_exp, action_std = self.actor(state_tensor)
                 mat_std = torch.diag_embed(action_std)
-                dist = MultivariateNormal(probs, mat_std)
-                selected_probs_tensor = dist.log_prob(action_tensor.flatten())
+                dist = MultivariateNormal(action_exp, mat_std)
+                selected_probs_tensor = dist.log_prob(action_tensor)
                 ratios = torch.exp(selected_probs_tensor - old_selected_probs_tensor.detach())
 
             else:
                 # Actions are used as indices, must be 
                 # LongTensor
+                probs = self.actor(state_tensor)
                 action_tensor = action_tensor.long()
                 selected_probs_tensor = torch.index_select(probs, 1, action_tensor).diag()
                 ratios = selected_probs_tensor/old_selected_probs_tensor
@@ -248,6 +247,8 @@ class PPOAgent():
         self.values = []
         self.selected_probs = []
         self.list_done = []
+        if(self.continuous_action_space):
+            self.stds = []
 
     def end_episode(self):
         self.list_done[-1] = True
@@ -259,20 +260,23 @@ class PPOAgent():
         self.batch_actions.extend(self.actions)
         self.batch_done.extend(self.list_done)
         self.batch_selected_probs.extend(self.selected_probs)
+        if(self.continuous_action_space):
+            self.batch_stds.extend(self.stds)
 
 
     def act(self, observation):
         # Get actions and convert to numpy array
-        action_probs = self.actor(torch.tensor(observation))
         val = self.critic(torch.tensor(observation))
         val = val.detach().numpy()
         if(self.continuous_action_space):
-            std_mat = torch.diag(self.action_std)
-            dist = MultivariateNormal(action_probs, std_mat)
+            action_exp, action_std = self.actor(torch.tensor(observation))
+            std_mat = torch.diag(action_std)
+            dist = MultivariateNormal(action_exp, std_mat)
             action = dist.sample()
             action_probs = dist.log_prob(action).detach().numpy()
             action = action.detach().numpy()
         else:
+            action_probs = self.actor(torch.tensor(observation))
             action_probs = action_probs.detach().numpy()
             action = np.random.choice(np.arange(self.ac_space), p=action_probs)
 

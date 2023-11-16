@@ -1,11 +1,8 @@
 #LunarLanderContinuous hyper parameters (solves it but not optimal)
 class TD3HyperParams :
     def __init__(self):
-        self.HIDDEN_SIZE = 400
-        self.ACT_INTER = 300
-
-        self.CRIT_IN = 400
-        self.CRIT_INTER = 300
+        self.HIDDEN_SIZE_1 = 400
+        self.HIDDEN_SIZE_2 = 300
 
         self.EPISODE_COUNT = 5000
         self.POLICY_DELAY = 2
@@ -21,26 +18,29 @@ class TD3HyperParams :
         self.POLICY_NOISE = 0.2
         self.NOISE_CLIP = 0.5
 
+        self.LEARN_EVERY = 4
+
         self.LEARNING_START = 25*self.BATCH_SIZE
-        self.MAX_STEPS = 2000
+        self.MAX_STEPS = 1000
         self.EXPLORATION_NOISE = 0.1
 
 
 #Cartpole hyper parameters (solves it but not optimal)
 class DQNHyperParams :
     def __init__(self):
-        self.BUFFER_SIZE = 1e9
-        self.ALPHA = 0.05 
+        self.BUFFER_SIZE = 1e5
+        self.TAU = 1e-3
         self.GAMMA = 0.99
-        self.LR = 0.01
-        self.BATCH_SIZE = 10
+        self.LR = 5e-4
+        self.BATCH_SIZE = 64
 
-        self.HIDDEN_SIZE_1 = 16
-        self.HIDDEN_SIZE_2 = 16
+        self.HIDDEN_SIZE_1 = 64
+        self.HIDDEN_SIZE_2 = 64
 
-        self.EPISODE_COUNT = 3000
+        self.EPISODE_COUNT = 2000
         self.MAX_STEPS = 1000
-        self.LEARNING_START = 0
+        self.LEARNING_START = 64
+        self.LEARN_EVERY = 4
 
         self.EPSILON = 1.0
         self.MIN_EPSILON = 0
@@ -62,12 +62,15 @@ class REINFORCEHyperParams :
 
 class PPOHyperParams :
     def __init__(self):
-        self.LR = 0.003
+        self.LR = 5e-4
         self.GAMMA = 0.99
         self.LAMBDA = 0.99
         self.EPSILON = 0.2
 
-        self.EPISODE_COUNT = 500
+        self.HIDDEN_SIZE_1 = 64
+        self.HIDDEN_SIZE_2 = 64
+
+        self.EPISODE_COUNT = 2000
         self.NUM_EP_ENV = 5
         self.K = 4
 
@@ -75,4 +78,4 @@ class PPOHyperParams :
         self.HIDDEN_SIZE = 32
 
     
-module = "CartPole-v1"  #"LunarLanderContinuous-v2"
+module = "LunarLanderContinuous-v2" #"CartPole-v1" #"LunarLander-v2" #"MountainCar-v0"
