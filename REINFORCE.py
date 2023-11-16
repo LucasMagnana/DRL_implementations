@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 import datetime as dt
 
 from python.NeuralNetworks import REINFORCE_Model
-from python.TD3Agent import *
-from python.DDQNAgent import *
 from python.hyperParams import REINFORCEHyperParams, module
 
 from test import test

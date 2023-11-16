@@ -66,8 +66,8 @@ if __name__ == '__main__':
         sum_rewards=0
         steps=0
         while True:
-            if((e-1)%(hyperParams.EPISODE_COUNT//10) == 0):
-                env.render()
+            '''if((e-1)%(hyperParams.EPISODE_COUNT//10) == 0):
+                env.render()'''
             ob_prec = ob   
             if(args.algorithm == "PPO"):
                 action, val, action_probs = agent.act(ob)

@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 
 class TD3Agent(object):
-    def __init__(self, observation_space, action_space, hyperParams, cuda=False):
+    def __init__(self, observation_space, action_space, hyperParams, cuda=False, actor_to_load=None):
 
         self.hyperParams = hyperParams
 
@@ -43,6 +43,10 @@ class TD3Agent(object):
         self.critic_2_optimizer = torch.optim.Adam(self.critic_2.parameters(), self.hyperParams.LR_CRITIC, weight_decay=self.hyperParams.WEIGHT_DECAY)
         
         self.actor = Actor(observation_space.shape[0], action_space.shape[0], self.hyperParams, max_action=action_space.high[0], tanh=True).to(device=self.device)
+        if(actor_to_load != None):
+            self.actor.load_state_dict(torch.load(actor_to_load))
+            self.actor.eval()
+        
         self.actor_target = copy.deepcopy(self.actor).to(device=self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), self.hyperParams.LR_ACTOR)
         

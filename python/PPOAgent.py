@@ -102,7 +102,7 @@ def gae(rewards, values, episode_ends, gamma, lam):
 
 class PPOAgent():
 
-    def __init__(self, ob_space, ac_space, hyperParams, model_to_load=None, continuous_action_space=False):
+    def __init__(self, ob_space, ac_space, hyperParams, actor_to_load=None, continuous_action_space=False):
 
         self.hyperParams = hyperParams
 
@@ -116,8 +116,8 @@ class PPOAgent():
             self.ac_space = ac_space.n  
             self.actor = PPO_Actor(ob_space.shape[0], self.ac_space, hyperParams)
 
-        if(model_to_load != None):
-            self.actor.load_state_dict(torch.load(model_to_load))
+        if(actor_to_load != None):
+            self.actor.load_state_dict(torch.load(actor_to_load))
             self.actor.eval()
 
 
