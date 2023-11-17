@@ -13,7 +13,6 @@ from python.DQNAgent import *
 from python.PPOAgent import *
 from python.hyperParams import *
 
-from test import test
 
 
 
@@ -69,14 +68,9 @@ if __name__ == '__main__':
             '''if((e-1)%(hyperParams.EPISODE_COUNT//10) == 0):
                 env.render()'''
             ob_prec = ob   
-            if(args.algorithm == "PPO"):
-                action, val, action_probs = agent.act(ob)
-                ob, reward, done, _, _ = env.step(action)
-                agent.memorize(ob_prec, val, action_probs, action, ob, reward, done)
-            else:
-                action = agent.act(ob)
-                ob, reward, done, _, _ = env.step(action)
-                agent.memorize(ob_prec, action, ob, reward, done)
+            action, infos = agent.act(ob)
+            ob, reward, done, _, _ = env.step(action)
+            agent.memorize(ob_prec, action, ob, reward, done, infos)
             sum_rewards += reward
             if(args.algorithm != "PPO" and steps%hyperParams.LEARN_EVERY == 0 and len(agent.buffer) > hyperParams.LEARNING_START):
                 agent.learn()

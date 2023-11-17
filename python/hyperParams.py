@@ -4,7 +4,7 @@ class TD3HyperParams :
         self.HIDDEN_SIZE_1 = 400
         self.HIDDEN_SIZE_2 = 300
 
-        self.EPISODE_COUNT = 5000
+        self.EPISODE_COUNT = 1500
         self.POLICY_DELAY = 2
 
         self.BUFFER_SIZE = 5e5  # replay buffer size
@@ -78,4 +78,4 @@ class PPOHyperParams :
         self.HIDDEN_SIZE = 32
 
     
-module = "LunarLanderContinuous-v2" #"CartPole-v1" #"LunarLander-v2" #"MountainCar-v0"
+module = "BipedalWalker-v3" #"LunarLanderContinuous-v2" #"CartPole-v1"

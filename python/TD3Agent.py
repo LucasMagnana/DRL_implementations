@@ -56,7 +56,7 @@ class TD3Agent(object):
         action = self.actor(torch.tensor(observation,  dtype=torch.float32, device=self.device)).data.numpy()
         action += np.random.normal(0, self.exploration_noise, size=self.action_space.shape[0])
         action = action.clip(self.action_space.low, self.action_space.high)
-        return torch.tensor(action).numpy()
+        return torch.tensor(action).numpy(), None
         
 
     def sample(self):
@@ -65,7 +65,7 @@ class TD3Agent(object):
         else:
             return sample(self.buffer, self.batch_size)
 
-    def memorize(self, ob_prec, action, ob, reward, done):
+    def memorize(self, ob_prec, action, ob, reward, done, infos):
         if(len(self.buffer) > self.buffer_size):
             self.buffer.pop(0)
         self.buffer.append([ob_prec, action, ob, reward, not(done)])

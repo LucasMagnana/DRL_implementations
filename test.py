@@ -57,10 +57,7 @@ if __name__ == '__main__':
         while True:
             env.render()
             ob_prec = ob   
-            if(args.algorithm == "PPO"):
-                action, val, action_probs = agent.act(ob)
-            else:
-                action = agent.act(ob)
+            action, infos = agent.act(ob)
             ob, reward, done, _, _ = env.step(action)
             sum_rewards += reward
             steps+=1

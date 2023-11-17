@@ -229,7 +229,9 @@ class PPOAgent():
         self.reset_batches()
 
 
-    def memorize(self, ob_prec, val, action_probs, action, ob, reward, done):
+    def memorize(self, ob_prec, action, ob, reward, done, infos):
+        val = infos[0]
+        action_probs = infos[1]
         self.states.append(ob_prec)
         self.values.extend(val)
         self.rewards.append(reward)
@@ -282,4 +284,4 @@ class PPOAgent():
 
         self.num_decisions_made += 1
 
-        return action, val, action_probs
+        return action, (val, action_probs)

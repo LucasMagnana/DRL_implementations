@@ -68,8 +68,11 @@ class DQNAgent(object):
         rand = random()
         if(rand > self.epsilon): #noise management
             _, indices = tens_qvalue.max(0) #finds the index of the max qvalue
-            return indices.item() #return it
-        return randint(0, tens_qvalue.size()[0]-1) #choose a random action
+            action = indices.item() #return it
+        else:
+            action = randint(0, tens_qvalue.size()[0]-1) #choose a random action
+
+        return action, None
 
     def sample(self):
         if(len(self.buffer) < self.batch_size):
