@@ -80,7 +80,7 @@ if __name__ == '__main__':
     tab_sum_rewards = []
     tab_mean_rewards = []
     for e in range(1, hyperParams.EPISODE_COUNT):
-        if(not args.no_save and (e-1)%100 == 0):
+        if(not args.no_save and (e-1) > 0 and (e-1)%100 == 0):
             save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams)
         if(args.algorithm == "PPO"):
             agent.start_episode()

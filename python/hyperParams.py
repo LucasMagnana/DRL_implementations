@@ -77,4 +77,4 @@ class PPOHyperParams :
         self.MAX_STEPS = 1000
 
     
-module = "CartPole-v1" #"BipedalWalker-v3" #"LunarLanderContinuous-v2"
+module = "Acrobot-v1" #"CartPole-v1" #"BipedalWalker-v3" #"LunarLanderContinuous-v2"

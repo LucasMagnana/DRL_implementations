@@ -1,6 +1,7 @@
 import argparse
 import sys
-import gym 
+import gym
+from gym.wrappers import RecordVideo 
 import pickle
 import torch
 import numpy as np
@@ -26,26 +27,32 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--test", action="store_true")
+    parser.add_argument("--save", action="store_true")
+    parser.add_argument("-m", "--module", type=str, default="CartPole-v1")
 
     args = parser.parse_args()
 
     if(args.test):
-        env = gym.make(module, render_mode="human") #gym env
+        if(args.save):
+            env = gym.make(args.module, render_mode="rgb_array") #gym en
+            env = RecordVideo(env, video_folder='videos')
+        else:
+            env = gym.make(args.module, render_mode="human") #gym env
     else:
-        env = gym.make(module) #gym env
+        env = gym.make(args.module) #gym env
 
 
     hyperParams = REINFORCEHyperParams()
 
     if(args.test):
-        with open('./trained_networks/'+module+'_REINFORCE.hp', 'rb') as infile:
+        with open('./trained_networks/'+args.module+'_REINFORCE.hp', 'rb') as infile:
             hyperParams = pickle.load(infile)
             
 
 
     policy = REINFORCE_Model(env.observation_space.shape[0], env.action_space.n, hyperParams)
     if(args.test):
-        policy.load_state_dict(torch.load('./trained_networks/'+module+'_REINFORCE.n'))
+        policy.load_state_dict(torch.load('./trained_networks/'+args.module+'_REINFORCE.n'))
         policy.eval()
     
     # Set up lists to hold results
@@ -143,12 +150,12 @@ if __name__ == '__main__':
         plt.plot(total_rewards, alpha=0.75)
         plt.plot(avg_rewards, color="darkblue")
         plt.ylabel('Sum of rewards')       
-        plt.savefig("./images/"+module+"_REINFORCE.png")
+        plt.savefig("./images/"+args.module+"_REINFORCE.png")
         
         #save the neural networks of the policy
-        torch.save(policy.state_dict(), './trained_networks/'+module+'_REINFORCE.n')
+        torch.save(policy.state_dict(), './trained_networks/'+args.module+'_REINFORCE.n')
 
         #save the hyper parameters (for the tests and just in case)
-        with open('./trained_networks/'+module+'_REINFORCE.hp', 'wb') as outfile:
+        with open('./trained_networks/'+args.module+'_REINFORCE.hp', 'wb') as outfile:
             pickle.dump(hyperParams, outfile)
                 

@@ -3,6 +3,7 @@ import sys
 import gym 
 import pickle
 
+from gym.wrappers import RecordVideo
 import matplotlib.pyplot as plt
 
 import datetime as dt
@@ -21,6 +22,7 @@ if __name__ == '__main__':
 
     parser.add_argument("-a", "--algorithm", type=str, default="PPO")
     parser.add_argument("-m", "--module", type=str, default="LunarLanderContinuous-v2")
+    parser.add_argument("--save", action="store_true")
 
     args = parser.parse_args()
 
@@ -30,7 +32,12 @@ if __name__ == '__main__':
     if(args.cuda):
         print(torch.cuda.get_device_name(0))
 
-    env = gym.make(args.module, render_mode="human") #gym env
+
+    if(args.save):
+        env = gym.make(args.module, render_mode="rgb_array") #gym en
+        env = RecordVideo(env, video_folder='videos')
+    else:
+        env = gym.make(args.module, render_mode="human") #gym env
 
     actor_to_load = "./trained_networks/"+args.module+"_"+args.algorithm+".n"
 
