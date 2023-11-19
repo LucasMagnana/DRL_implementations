@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument("--cuda", action="store_true")
 
     parser.add_argument("-a", "--algorithm", type=str, default="PPO")
-    parser.add_argument("-m", "--module", type=str, default="CartPole-v1")
+    parser.add_argument("-m", "--module", type=str, default="LunarLanderContinuous-v2")
 
     args = parser.parse_args()
 
@@ -55,7 +55,6 @@ if __name__ == '__main__':
         sum_rewards=0
         steps=0
         while True:
-            env.render()
             ob_prec = ob   
             action, infos = agent.act(ob)
             ob, reward, done, _, _ = env.step(action)

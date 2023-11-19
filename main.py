@@ -14,6 +14,27 @@ from python.PPOAgent import *
 from python.hyperParams import *
 
 
+def save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams):
+    #plot the sums of rewards and the noise (noise shouldnt be in the same graph but for now it's good)
+    plt.clf()
+    plt.figure()
+    plt.plot(tab_sum_rewards, alpha=0.75)
+    plt.plot(tab_mean_rewards, color="darkblue")
+    plt.xlabel('Episodes')   
+    plt.ylabel('Sum of rewards')       
+    plt.savefig("./images/"+module+"_"+args.algorithm+".png")
+    
+    #save the neural networks of the agent
+    print()
+    print("Saving...")
+    #torch.save(agent.actor_target.state_dict(), './trained_networks/'+module+'_target.n')
+    torch.save(agent.actor.state_dict(), "./trained_networks/"+module+"_"+args.algorithm+".n")
+
+    #save the hyper parameters (for the tests and just in case)
+    with open("./trained_networks/"+module+"_"+args.algorithm+".hp", 'wb') as outfile:
+        pickle.dump(hyperParams, outfile)
+
+
 
 
 
@@ -23,8 +44,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--cuda", action="store_true")
-
     parser.add_argument("-a", "--algorithm", type=str, default="3DQN")
+    parser.add_argument("--no-save", action="store_true")
 
     args = parser.parse_args()
 
@@ -59,14 +80,14 @@ if __name__ == '__main__':
     tab_sum_rewards = []
     tab_mean_rewards = []
     for e in range(1, hyperParams.EPISODE_COUNT):
+        if(not args.no_save and (e-1)%100 == 0):
+            save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams)
         if(args.algorithm == "PPO"):
             agent.start_episode()
         ob = env.reset()[0]
         sum_rewards=0
         steps=0
         while True:
-            '''if((e-1)%(hyperParams.EPISODE_COUNT//10) == 0):
-                env.render()'''
             ob_prec = ob   
             action, infos = agent.act(ob)
             ob, reward, done, _, _ = env.step(action)
@@ -76,9 +97,9 @@ if __name__ == '__main__':
                 agent.learn()
             steps+=1
             if done or steps > hyperParams.MAX_STEPS:
-                if(args.algorithm == "PPO"):
+                if("DQN" not in args.algorithm):
                     agent.end_episode()
-                    if(e > 0 and e%hyperParams.NUM_EP_ENV == 0):
+                    if(args.algorithm == "PPO" and e > 0 and e%hyperParams.NUM_EP_ENV == 0):
                         agent.learn()
 
                 tab_sum_rewards.append(sum_rewards)   
@@ -88,22 +109,7 @@ if __name__ == '__main__':
         print("\rEp: {} Average of last 100: {:.2f}".format(e, tab_mean_rewards[-1]), end="")
           
 
-    
-    #plot the sums of rewards and the noise (noise shouldnt be in the same graph but for now it's good)
-    plt.figure(figsize=(25, 12), dpi=80)
-    plt.plot(tab_sum_rewards, linewidth=1)
-    plt.plot(tab_mean_rewards, linewidth=1)
-    plt.ylabel('Sum of the rewards')       
-    plt.savefig("./images/"+module+"_"+args.algorithm+".png")
-    
-    #save the neural networks of the agent
-    print("Saving...")
-    #torch.save(agent.actor_target.state_dict(), './trained_networks/'+module+'_target.n')
-    torch.save(agent.actor.state_dict(), "./trained_networks/"+module+"_"+args.algorithm+".n")
-
-    #save the hyper parameters (for the tests and just in case)
-    with open("./trained_networks/"+module+"_"+args.algorithm+".hp", 'wb') as outfile:
-        pickle.dump(hyperParams, outfile)
+    save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams)
 
     # Close the env (only useful for the gym envs for now)
     env.close()

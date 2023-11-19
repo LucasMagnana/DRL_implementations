@@ -80,7 +80,7 @@ class DQNAgent(object):
         else:
             return self.buffer.sample(self.batch_size)
 
-    def memorize(self, ob_prec, action, ob, reward, done):
+    def memorize(self, ob_prec, action, ob, reward, done, infos):
         experience = copy.deepcopy(ob_prec).flatten()
         experience = np.append(experience, action)
         experience = np.append(experience, ob.flatten())

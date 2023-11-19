@@ -46,6 +46,7 @@ class TD3Agent(object):
         if(actor_to_load != None):
             self.actor.load_state_dict(torch.load(actor_to_load))
             self.actor.eval()
+            self.noise = None
         
         self.actor_target = copy.deepcopy(self.actor).to(device=self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), self.hyperParams.LR_ACTOR)
@@ -54,7 +55,8 @@ class TD3Agent(object):
 
     def act(self, observation):
         action = self.actor(torch.tensor(observation,  dtype=torch.float32, device=self.device)).data.numpy()
-        action += np.random.normal(0, self.exploration_noise, size=self.action_space.shape[0])
+        if(self.noise != None):
+            action += self.noise.sample() #np.random.normal(0, self.exploration_noise, size=self.action_space.shape[0])
         action = action.clip(self.action_space.low, self.action_space.high)
         return torch.tensor(action).numpy(), None
         
@@ -70,15 +72,18 @@ class TD3Agent(object):
             self.buffer.pop(0)
         self.buffer.append([ob_prec, action, ob, reward, not(done)])
 
+    def end_episode(self):
+        self.noise.reset()
+
     def learn(self):
         
         for i in range(5):
             
             spl = self.sample()
 
-            tens_ob = torch.tensor([item[0] for item in spl], dtype=torch.float32, device=self.device)
-            tens_action = torch.tensor([item[1] for item in spl], dtype=torch.float32, device=self.device)
-            tens_ob_next = torch.tensor([item[2] for item in spl], dtype=torch.float32, device=self.device)
+            tens_ob = torch.tensor(np.array([item[0] for item in spl]), dtype=torch.float32, device=self.device)
+            tens_action = torch.tensor(np.array([item[1] for item in spl]), dtype=torch.float32, device=self.device)
+            tens_ob_next = torch.tensor(np.array([item[2] for item in spl]), dtype=torch.float32, device=self.device)
             tens_reward = torch.tensor([item[3] for item in spl], dtype=torch.float32, device=self.device)
             tens_done = torch.tensor([item[4] for item in spl], dtype=torch.float32, device=self.device)
             
