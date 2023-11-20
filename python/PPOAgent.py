@@ -155,7 +155,7 @@ class PPOAgent():
 
         for k in range(self.hyperParams.K):
 
-            state_tensor = torch.tensor(self.batch_states)
+            state_tensor = torch.tensor(np.array(self.batch_states))
 
             #print(state_tensor.tolist() == self.batch_states)
 
@@ -169,7 +169,7 @@ class PPOAgent():
             #rewards_tensor = (rewards_tensor - rewards_tensor.mean()) / (rewards_tensor.std() + 1e-5)
             
 
-            action_tensor = torch.tensor(self.batch_actions)
+            action_tensor = torch.tensor(np.array(self.batch_actions))
 
             
             # Calculate actor loss

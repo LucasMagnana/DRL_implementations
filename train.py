@@ -46,6 +46,9 @@ if __name__ == '__main__':
     parser.add_argument("--cuda", action="store_true")
     parser.add_argument("-a", "--algorithm", type=str, default="3DQN")
     parser.add_argument("--no-save", action="store_true")
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("-m", "--module", type=str, default="LunarLanderContinuous-v2")
+    #"LunarLanderContinuous-v2" #"Acrobot-v1" #"CartPole-v1" #"BipedalWalker-v3" 
 
     args = parser.parse_args()
 
@@ -55,7 +58,10 @@ if __name__ == '__main__':
     if(args.cuda):
         print(torch.cuda.get_device_name(0))
 
-    env = gym.make(module) #gym env
+    if(args.render):
+        env = gym.make(args.module, render_mode="human") #gym env
+    else:
+        env = gym.make(args.module) #gym env
 
     if(args.algorithm == "DQN"):
         hyperParams = DQNHyperParams()
@@ -70,18 +76,12 @@ if __name__ == '__main__':
         hyperParams = PPOHyperParams()
         agent = PPOAgent(env.observation_space, env.action_space, hyperParams, continuous_action_space=isinstance(env.action_space, gym.spaces.box.Box))
 
-    '''if("Continuous" in module): #agents are not the same wether the action space is continuous or discrete
-        hyperParams = TD3HyperParams()     
-        agent = TD3Agent(env.action_space, env.observation_space, hyperParams, cuda=args.cuda)
-    else:
-        hyperParams = DQNHyperParams()
-        agent = DQNAgent(env.action_space, env.observation_space, hyperParams, cuda=args.cuda)'''
 
     tab_sum_rewards = []
     tab_mean_rewards = []
     for e in range(1, hyperParams.EPISODE_COUNT):
         if(not args.no_save and (e-1) > 0 and (e-1)%100 == 0):
-            save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams)
+            save(tab_sum_rewards, tab_mean_rewards, args.module, args, agent, hyperParams)
         if(args.algorithm == "PPO"):
             agent.start_episode()
         ob = env.reset()[0]
@@ -109,7 +109,7 @@ if __name__ == '__main__':
         print("\rEp: {} Average of last 100: {:.2f}".format(e, tab_mean_rewards[-1]), end="")
           
 
-    save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams)
+    save(tab_sum_rewards, tab_mean_rewards, args.module, args, agent, hyperParams)
 
     # Close the env (only useful for the gym envs for now)
     env.close()

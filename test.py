@@ -45,6 +45,8 @@ if __name__ == '__main__':
     with open("./trained_networks/"+args.module+"_"+args.algorithm+".hp", 'rb') as infile:
         hyperParams = pickle.load(infile)
 
+    print(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2, hyperParams.LR, hyperParams.EPISODE_COUNT)
+
     if(args.algorithm == "DQN"):
         agent = DQNAgent(env.observation_space, env.action_space, hyperParams, actor_to_load=actor_to_load)
     elif(args.algorithm == "3DQN"):
