@@ -139,7 +139,7 @@ class PPO_Critic(nn.Module):
 
 
 class Actor_CNN(nn.Module):
-    def __init__(self, size_ob, size_action, hyperParams):
+    def __init__(self, size_ob, size_action, hyperParams, ppo=False):
         super(Actor_CNN, self).__init__()
 
         self.cnn = nn.Sequential(
@@ -154,6 +154,9 @@ class Actor_CNN(nn.Module):
             nn.Linear(3136, 512),
             nn.ReLU(),
             nn.Linear(512, size_action))
+
+        if(ppo):
+            self.actor.append(nn.Softmax(dim=-1))
 
 
     

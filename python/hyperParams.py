@@ -62,18 +62,20 @@ class REINFORCEHyperParams :
 
 class PPOHyperParams :
     def __init__(self):
-        self.LR = 0.000025
+        self.LR = 1e-4
         self.GAMMA = 0.99
         self.LAMBDA = 0.99
-        self.EPSILON = 0.2
+        self.EPSILON = 0.1
 
         self.HIDDEN_SIZE_1 = 256
         self.HIDDEN_SIZE_2 = 256
 
-        self.EPISODE_COUNT = 100000
-        self.NUM_EP_ENV = 5
-        self.K = 5
+        self.TRAINING_FRAMES = 1e7
+        self.K = 10
 
-        self.MAX_STEPS = 1e100
+        self.BATCH_SIZE = 32
+        self.MAXLEN = 1000
+
+        self.MAX_STEPS = 1e10
 
 

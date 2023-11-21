@@ -110,7 +110,7 @@ class PPOAgent():
 
         if(cnn):
             self.ac_space = ac_space.n  
-            self.actor = PPO_Actor_CNN(ob_space.shape[0], self.ac_space, hyperParams)
+            self.actor = Actor_CNN(ob_space.shape[0], self.ac_space, hyperParams, ppo=True)
 
         elif(self.continuous_action_space):
             self.ac_space = ac_space.shape[0]
@@ -125,7 +125,7 @@ class PPOAgent():
             self.actor.eval()
 
         if(cnn):
-            self.critic = PPO_Critic_CNN(ob_space.shape[0], hyperParams)
+            self.critic = Critic_CNN(ob_space.shape[0], hyperParams)
         else:
             self.critic = PPO_Critic(ob_space.shape[0], hyperParams)
 
@@ -158,79 +158,79 @@ class PPOAgent():
 
 
     def learn(self):
-
         for k in range(self.hyperParams.K):
 
-            state_tensor = torch.tensor(np.array(self.batch_states))
+            for i in range(0, len(self.batch_states), self.hyperParams.BATCH_SIZE):
 
-            #print(state_tensor.tolist() == self.batch_states)
+                state_tensor = torch.tensor(np.array(self.batch_states[i:i+self.hyperParams.BATCH_SIZE]))
 
-            advantages_tensor = torch.tensor(self.batch_advantages)
-            old_selected_probs_tensor = torch.tensor(self.batch_selected_probs)
+                #print(state_tensor.tolist() == self.batch_states)
 
-            old_values_tensor = torch.tensor(self.batch_values)
+                advantages_tensor = torch.tensor(self.batch_advantages[i:i+self.hyperParams.BATCH_SIZE])
+                old_selected_probs_tensor = torch.tensor(self.batch_selected_probs[i:i+self.hyperParams.BATCH_SIZE])
 
-            rewards_tensor = torch.tensor(self.batch_rewards)
-            # Normalizing the rewards:
-            #rewards_tensor = (rewards_tensor - rewards_tensor.mean()) / (rewards_tensor.std() + 1e-5)
+                old_values_tensor = torch.tensor(self.batch_values[i:i+self.hyperParams.BATCH_SIZE])
+
+                rewards_tensor = torch.tensor(self.batch_rewards[i:i+self.hyperParams.BATCH_SIZE])
+                # Normalizing the rewards:
+                #rewards_tensor = (rewards_tensor - rewards_tensor.mean()) / (rewards_tensor.std() + 1e-5)
+                
+
+                action_tensor = torch.tensor(np.array(self.batch_actions[i:i+self.hyperParams.BATCH_SIZE]))
+                
+                # Calculate actor loss
+                values_tensor = self.critic(state_tensor)
+                values_tensor = values_tensor.flatten()
+
+                if(self.continuous_action_space):
+                    action_exp, action_std = self.actor(state_tensor)
+                    mat_std = torch.diag_embed(action_std)
+                    dist = MultivariateNormal(action_exp, mat_std)
+                    selected_probs_tensor = dist.log_prob(action_tensor)
+                    ratios = torch.exp(selected_probs_tensor - old_selected_probs_tensor.detach())
+
+                else:
+                    # Actions are used as indices, must be 
+                    # LongTensor
+                    probs = self.actor(state_tensor)
+                    action_tensor = action_tensor.long()
+                    selected_probs_tensor = torch.index_select(probs, 1, action_tensor).diag()
+                    ratios = selected_probs_tensor/old_selected_probs_tensor
+
+                
+                #advantages_tensor = rewards_tensor - values_tensor.detach()   
+
+                loss_actor = ratios*advantages_tensor
+                clipped_loss_actor = torch.clamp(ratios, 1-self.hyperParams.EPSILON, 1+self.hyperParams.EPSILON)*advantages_tensor
+
+                loss_actor = -(torch.min(loss_actor, clipped_loss_actor).mean())
+
+                # Calculate critic loss
+                '''value_pred_clipped = old_values_tensor + (values_tensor - old_values_tensor).clamp(-self.hyperParams.EPSILON, self.hyperParams.EPSILON)
+                value_losses = (values_tensor - rewards_tensor) ** 2
+                value_losses_clipped = (value_pred_clipped - rewards_tensor) ** 2
+
+                loss_critic = 0.5 * torch.max(value_losses, value_losses_clipped)
+                loss_critic = loss_critic.mean()''' 
+
+
+                loss_critic = self.mse(values_tensor, rewards_tensor)
             
 
-            action_tensor = torch.tensor(np.array(self.batch_actions))
 
-            
-            # Calculate actor loss
-            values_tensor = self.critic(state_tensor)
-            values_tensor = values_tensor.flatten()
+                self.tab_losses.append((loss_actor.item()+loss_critic.item())/2)
 
-            if(self.continuous_action_space):
-                action_exp, action_std = self.actor(state_tensor)
-                mat_std = torch.diag_embed(action_std)
-                dist = MultivariateNormal(action_exp, mat_std)
-                selected_probs_tensor = dist.log_prob(action_tensor)
-                ratios = torch.exp(selected_probs_tensor - old_selected_probs_tensor.detach())
+                #print("Loss :", self.tab_losses[-1])
 
-            else:
-                # Actions are used as indices, must be 
-                # LongTensor
-                probs = self.actor(state_tensor)
-                action_tensor = action_tensor.long()
-                selected_probs_tensor = torch.index_select(probs, 1, action_tensor).diag()
-                ratios = selected_probs_tensor/old_selected_probs_tensor
-
-            
-            #advantages_tensor = rewards_tensor - values_tensor.detach()   
-
-            loss_actor = ratios*advantages_tensor
-            clipped_loss_actor = torch.clamp(ratios, 1-self.hyperParams.EPSILON, 1+self.hyperParams.EPSILON)*advantages_tensor
-
-            loss_actor = -(torch.min(loss_actor, clipped_loss_actor).mean())
-
-            # Calculate critic loss
-            '''value_pred_clipped = old_values_tensor + (values_tensor - old_values_tensor).clamp(-self.hyperParams.EPSILON, self.hyperParams.EPSILON)
-            value_losses = (values_tensor - rewards_tensor) ** 2
-            value_losses_clipped = (value_pred_clipped - rewards_tensor) ** 2
-
-            loss_critic = 0.5 * torch.max(value_losses, value_losses_clipped)
-            loss_critic = loss_critic.mean()''' 
-
-
-            loss_critic = self.mse(values_tensor, rewards_tensor)
-         
-
-
-            self.tab_losses.append((loss_actor.item()+loss_critic.item())/2)
-
-            #print("Loss :", self.tab_losses[-1])
-
-            # Reset gradients
-            self.optimizer_actor.zero_grad()
-            self.optimizer_critic.zero_grad()
-            # Calculate gradients
-            loss_actor.backward()
-            loss_critic.backward()
-            # Apply gradients
-            self.optimizer_actor.step()
-            self.optimizer_critic.step()
+                # Reset gradients
+                self.optimizer_actor.zero_grad()
+                self.optimizer_critic.zero_grad()
+                # Calculate gradients
+                loss_actor.backward()
+                loss_critic.backward()
+                # Apply gradients
+                self.optimizer_actor.step()
+                self.optimizer_critic.step()
 
         self.reset_batches()
 
