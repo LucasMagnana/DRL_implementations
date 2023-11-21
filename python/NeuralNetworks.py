@@ -89,7 +89,6 @@ class PPO_Actor(nn.Module):
         super(PPO_Actor, self).__init__()
 
         self.max_action = max_action
-
         if(max_action < 0):
             self.actor = nn.Sequential(
                 nn.Linear(size_ob, hyperParams.HIDDEN_SIZE_1),
@@ -123,9 +122,8 @@ class PPO_Actor(nn.Module):
 
 
 class PPO_Critic(nn.Module):
-    def __init__(self, size_ob, hyperParams):
+    def __init__(self, size_ob, hyperParams, cnn=False):
         super(PPO_Critic, self).__init__()
-
         self.critic = nn.Sequential(
                 nn.Linear(size_ob, hyperParams.HIDDEN_SIZE_1),
                 nn.ReLU(),
@@ -137,3 +135,57 @@ class PPO_Critic(nn.Module):
     def forward(self, ob):
         return self.critic(ob.float())
 
+
+
+
+class Actor_CNN(nn.Module):
+    def __init__(self, size_ob, size_action, hyperParams):
+        super(Actor_CNN, self).__init__()
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(size_ob, 32, 8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1),
+            nn.ReLU())
+        
+        self.actor = nn.Sequential(
+            nn.Linear(3136, 512),
+            nn.ReLU(),
+            nn.Linear(512, size_action))
+
+
+    
+    def forward(self, ob):
+        features = self.cnn(ob.float())
+        if(len(ob.shape)==4):
+            features = torch.flatten(features, start_dim=1)
+        else:
+            features = torch.flatten(features)
+        return self.actor(features)
+
+
+class Critic_CNN(nn.Module):
+    def __init__(self, size_ob, hyperParams):
+        super(Critic_CNN, self).__init__()
+        self.cnn = nn.Sequential(
+            nn.Conv2d(size_ob, 32, 8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1),
+            nn.ReLU())
+
+        self.critic=nn.Sequential(
+            nn.Linear(3136, 512),
+            nn.ReLU(),
+            nn.Linear(512, 1))
+    
+    def forward(self, ob):
+        features = self.cnn(ob.float())
+        if(len(ob.shape)==4):
+            features = torch.flatten(features, start_dim=1)
+        else:
+            features = torch.flatten(features)
+        return self.critic(features)

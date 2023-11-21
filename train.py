@@ -3,6 +3,7 @@ import sys
 import gym 
 import pickle
 import numpy as np
+from gym.wrappers import GrayScaleObservation, FrameStack, ResizeObservation
 
 import matplotlib.pyplot as plt
 
@@ -60,12 +61,19 @@ if __name__ == '__main__':
 
     if(args.render):
         env = gym.make(args.module, render_mode="human") #gym env
+    elif("ALE" in args.module):
+        cnn = True
+        env = gym.make(args.module, frameskip=4)
+        env = ResizeObservation(env, shape=84)
+        env = GrayScaleObservation(env)
+        env = FrameStack(env, num_stack=4)
+
     else:
         env = gym.make(args.module) #gym env
 
     if(args.algorithm == "DQN"):
         hyperParams = DQNHyperParams()
-        agent = DQNAgent(env.observation_space, env.action_space, hyperParams)
+        agent = DQNAgent(env.observation_space, env.action_space, hyperParams, cnn=cnn)
     elif(args.algorithm == "3DQN"):
         hyperParams = DQNHyperParams()
         agent = DQNAgent(env.observation_space, env.action_space, hyperParams, double=True, duelling=True)
@@ -74,42 +82,56 @@ if __name__ == '__main__':
         agent = TD3Agent(env.observation_space, env.action_space, hyperParams, cuda=args.cuda)
     elif(args.algorithm == "PPO"):
         hyperParams = PPOHyperParams()
-        agent = PPOAgent(env.observation_space, env.action_space, hyperParams, continuous_action_space=isinstance(env.action_space, gym.spaces.box.Box))
+        agent = PPOAgent(env.observation_space, env.action_space, hyperParams, continuous_action_space=isinstance(env.action_space, gym.spaces.box.Box), cnn=cnn)
 
 
     tab_sum_rewards = []
     tab_mean_rewards = []
-    for e in range(1, hyperParams.EPISODE_COUNT):
-        if(not args.no_save and (e-1) > 0 and (e-1)%100 == 0):
-            save(tab_sum_rewards, tab_mean_rewards, args.module, args, agent, hyperParams)
+    total_steps = 0
+    ep = 0
+    while(total_steps < hyperParams.TRAINING_FRAMES):
+        if(not args.no_save and ep > 0 and ep%100 == 0):
+            save(tab_sum_rewards, tab_mean_rewards, args.module.removeprefix("ALE/"), args, agent, hyperParams)
         if(args.algorithm == "PPO"):
             agent.start_episode()
         ob = env.reset()[0]
         sum_rewards=0
         steps=0
+        nb_noop_at_start = 0
         while True:
             ob_prec = ob   
             action, infos = agent.act(ob)
             ob, reward, done, _, _ = env.step(action)
+            if("ALE" in args.module):
+                reward = np.clip(reward, -1, 1)
+                if(nb_noop_at_start >= 0):
+                    if(action == 0):
+                        nb_noop_at_start += 1
+                    else:
+                        nb_noop_at_start = -1
+                    if(nb_noop_at_start == 30):
+                        reward = -10
             agent.memorize(ob_prec, action, ob, reward, done, infos)
             sum_rewards += reward
             if(args.algorithm != "PPO" and steps%hyperParams.LEARN_EVERY == 0 and len(agent.buffer) > hyperParams.LEARNING_START):
                 agent.learn()
             steps+=1
-            if done or steps > hyperParams.MAX_STEPS:
+            if done or steps > hyperParams.MAX_STEPS or nb_noop_at_start == 30:
                 if("DQN" not in args.algorithm):
                     agent.end_episode()
-                    if(args.algorithm == "PPO" and e > 0 and e%hyperParams.NUM_EP_ENV == 0):
+                    if(args.algorithm == "PPO" and ep > 0 and ep%hyperParams.NUM_EP_ENV == 0):
                         agent.learn()
 
                 tab_sum_rewards.append(sum_rewards)   
-                tab_mean_rewards.append(np.mean(tab_sum_rewards[-100:]))   
+                tab_mean_rewards.append(np.mean(tab_sum_rewards[-100:]))
+                total_steps += steps  
+                ep += 1 
                 break
 
-        print("\rEp: {} Average of last 100: {:.2f}".format(e, tab_mean_rewards[-1]), end="")
+        print("\rStep: {} Average of last 100: {:.2f}".format(total_steps, tab_mean_rewards[-1]), end="")
           
 
-    save(tab_sum_rewards, tab_mean_rewards, args.module, args, agent, hyperParams)
+    save(tab_sum_rewards, tab_mean_rewards, args.module.removeprefix("ALE/"), args, agent, hyperParams)
 
     # Close the env (only useful for the gym envs for now)
     env.close()

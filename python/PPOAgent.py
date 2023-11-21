@@ -12,7 +12,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions.multivariate_normal import MultivariateNormal
 
-from python.NeuralNetworks import PPO_Actor, PPO_Critic
+from python.NeuralNetworks import PPO_Actor, PPO_Critic, Actor_CNN, Critic_CNN
 
 '''
 import torchvision.transforms as T
@@ -102,16 +102,20 @@ def gae(rewards, values, episode_ends, gamma, lam):
 
 class PPOAgent():
 
-    def __init__(self, ob_space, ac_space, hyperParams, actor_to_load=None, continuous_action_space=False):
+    def __init__(self, ob_space, ac_space, hyperParams, actor_to_load=None, continuous_action_space=False, cnn=False):
 
         self.hyperParams = hyperParams
 
         self.continuous_action_space = continuous_action_space
 
+        if(cnn):
+            self.ac_space = ac_space.n  
+            self.actor = PPO_Actor_CNN(ob_space.shape[0], self.ac_space, hyperParams)
 
-        if(self.continuous_action_space):
+        elif(self.continuous_action_space):
             self.ac_space = ac_space.shape[0]
             self.actor = PPO_Actor(ob_space.shape[0], self.ac_space, hyperParams, max_action=ac_space.high[0])
+
         else:
             self.ac_space = ac_space.n  
             self.actor = PPO_Actor(ob_space.shape[0], self.ac_space, hyperParams)
@@ -120,8 +124,10 @@ class PPOAgent():
             self.actor.load_state_dict(torch.load(actor_to_load))
             self.actor.eval()
 
-
-        self.critic = PPO_Critic(ob_space.shape[0], hyperParams)
+        if(cnn):
+            self.critic = PPO_Critic_CNN(ob_space.shape[0], hyperParams)
+        else:
+            self.critic = PPO_Critic(ob_space.shape[0], hyperParams)
 
         # Define optimizer
         self.optimizer_actor = torch.optim.Adam(self.actor.parameters(), lr=self.hyperParams.LR)
@@ -268,7 +274,7 @@ class PPOAgent():
 
     def act(self, observation):
         # Get actions and convert to numpy array
-        val = self.critic(torch.tensor(observation))
+        val = self.critic(torch.tensor(np.array(observation)))
         val = val.detach().numpy()
         if(self.continuous_action_space):
             action_exp, action_std = self.actor(torch.tensor(observation))
@@ -278,7 +284,7 @@ class PPOAgent():
             action_probs = dist.log_prob(action).detach().numpy()
             action = action.detach().numpy()
         else:
-            action_probs = self.actor(torch.tensor(observation))
+            action_probs = self.actor(torch.tensor(np.array(observation)))
             action_probs = action_probs.detach().numpy()
             action = np.random.choice(np.arange(self.ac_space), p=action_probs)
 
