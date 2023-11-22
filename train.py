@@ -1,11 +1,8 @@
 import argparse
 import sys
 import gym 
-import pickle
 import numpy as np
 from gym.wrappers import GrayScaleObservation, FrameStack, ResizeObservation
-
-import matplotlib.pyplot as plt
 
 import datetime as dt
 
@@ -13,28 +10,7 @@ from python.TD3Agent import *
 from python.DQNAgent import *
 from python.PPOAgent import *
 from python.hyperParams import *
-
-
-def save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams):
-    #plot the sums of rewards and the noise (noise shouldnt be in the same graph but for now it's good)
-    plt.clf()
-    plt.figure()
-    plt.plot(tab_sum_rewards, alpha=0.75)
-    plt.plot(tab_mean_rewards, color="darkblue")
-    plt.xlabel('Episodes')   
-    plt.ylabel('Sum of rewards')       
-    plt.savefig("./images/"+module+"_"+args.algorithm+".png")
-    
-    #save the neural networks of the agent
-    print()
-    print("Saving...")
-    #torch.save(agent.actor_target.state_dict(), './trained_networks/'+module+'_target.n')
-    torch.save(agent.actor.state_dict(), "./trained_networks/"+module+"_"+args.algorithm+".n")
-
-    #save the hyper parameters (for the tests and just in case)
-    with open("./trained_networks/"+module+"_"+args.algorithm+".hp", 'wb') as outfile:
-        pickle.dump(hyperParams, outfile)
-
+from python.utils import save
 
 
 
@@ -70,6 +46,7 @@ if __name__ == '__main__':
 
     else:
         env = gym.make(args.module) #gym env
+        cnn = False
 
     if(args.algorithm == "DQN"):
         hyperParams = DQNHyperParams()

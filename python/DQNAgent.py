@@ -11,7 +11,8 @@ import copy
 import numpy as np
 import torch
 
-from python.NeuralNetworks import Actor, DuellingActor, DuellingActor_CNN, Actor_CNN, Critic_CNN
+from python.NeuralNetworks import Actor, DuellingActor, DuellingActor_CNN, Actor_CNN
+from python.utils import *
 
 class DQNAgent(object):
     def __init__(self, observation_space, action_space, hyperParams, test=False, double=False, duelling=False, PER=False, cuda=False,\
@@ -40,6 +41,8 @@ class DQNAgent(object):
         self.duelling = duelling
         self.cnn = cnn
         if(self.cnn):
+            self.list_modifs = []
+            self.original_image = None
             if(self.duelling):
                 self.actor = DuellingActor_CNN(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) 
             else:
@@ -91,14 +94,20 @@ class DQNAgent(object):
 
     def memorize(self, ob_prec, action, ob, reward, done, infos):
         if(self.cnn):
-            experience = copy.deepcopy(ob_prec)
+            if(self.original_image == None):
+                self.original_image = torch.tensor(ob)
+            modifs_ob = compute_modifications(self.original_image, torch.tensor(ob))
+            modifs_ob_prec = compute_modifications(self.original_image, torch.tensor(ob_prec))
+            self.list_modifs.append(modifs_ob_prec)
+            experience = torch.tensor(len(self.list_modifs)-1)
+            experience = np.append(experience, action)
+            self.list_modifs.append(modifs_ob)
+            experience = np.append(experience, len(self.list_modifs)-1)
         else:
             experience = copy.deepcopy(ob_prec).flatten()
-        experience = np.append(experience, action)
-        if(self.cnn):
-            experience = np.append(experience, ob)
-        else:
+            experience = np.append(experience, action)
             experience = np.append(experience, ob.flatten())
+            
         experience = np.append(experience, reward)
         experience = np.append(experience, not(done))
         self.buffer.add(torch.FloatTensor(experience, device=self.device))   
@@ -125,9 +134,18 @@ class DQNAgent(object):
             spl = spl[0]
 
         if(self.cnn):
-            spl = torch.split(spl, [4*84*84, 1, 4*84*84, 1, 1], dim=1)
-            tens_state = torch.reshape(spl[0], [32, 4, 84, 84])
-            tens_state_next = torch.reshape(spl[2], [32, 4, 84, 84])
+            spl = torch.split(spl, [1, 1, 1, 1, 1], dim=1)
+            for i in range(len(spl[0])):
+                state = modify_image(self.original_image, self.list_modifs[int(spl[0][i].item())])
+                state_next = modify_image(self.original_image, self.list_modifs[int(spl[2][i].item())])
+                if(i == 0):
+                    tens_state = state
+                    tens_state_next = state_next
+                else:
+                    tens_state = torch.cat((tens_state, state))
+                    tens_state_next = torch.cat((tens_state_next, state_next))
+            tens_state = torch.reshape(tens_state, (32, 4, 84, 84))
+            tens_state_next = torch.reshape(tens_state_next, (32, 4, 84, 84))
         else:
             spl = torch.split(spl, [self.observation_space.shape[0], 1, self.observation_space.shape[0], 1, 1], dim=1)
             tens_state = spl[0]

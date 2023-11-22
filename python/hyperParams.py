@@ -28,10 +28,10 @@ class TD3HyperParams :
 #Cartpole hyper parameters (solves it but not optimal)
 class DQNHyperParams :
     def __init__(self):
-        self.BUFFER_SIZE = 200000
-        self.TARGET_UPDATE = 10000
+        self.BUFFER_SIZE = 1e5
+        self.TARGET_UPDATE = 1e3
         self.GAMMA = 0.99
-        self.LR = 0.00025
+        self.LR = 2.5e-4
         self.BATCH_SIZE = 32
 
         self.HIDDEN_SIZE_1 = 64
@@ -39,12 +39,12 @@ class DQNHyperParams :
 
         self.TRAINING_FRAMES = 1e7
         self.MAX_STEPS = 1e10
-        self.LEARNING_START = 50000
+        self.LEARNING_START = 5e3
         self.LEARN_EVERY = 1
 
         self.EPSILON = 1.0
         self.MIN_EPSILON = 0.1
-        self.EPSILON_DECAY = self.EPSILON/1e6
+        self.EPSILON_DECAY = self.EPSILON/1e5
 
 
 class REINFORCEHyperParams :
@@ -62,7 +62,7 @@ class REINFORCEHyperParams :
 
 class PPOHyperParams :
     def __init__(self):
-        self.LR = 1e-4
+        self.LR = 1e-5
         self.GAMMA = 0.99
         self.LAMBDA = 0.99
         self.EPSILON = 0.1
@@ -70,7 +70,7 @@ class PPOHyperParams :
         self.HIDDEN_SIZE_1 = 256
         self.HIDDEN_SIZE_2 = 256
 
-        self.TRAINING_FRAMES = 1e7
+        self.TRAINING_FRAMES = 1e6
         self.K = 10
 
         self.BATCH_SIZE = 32
