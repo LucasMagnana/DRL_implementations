@@ -54,6 +54,43 @@ class DuellingActor(nn.Module):
 
 
 
+class DuellingActor_CNN(nn.Module):
+
+    def __init__(self, size_ob, size_action, hyperParams): #for saved hyperparameters
+        super(DuellingActor_CNN, self).__init__()
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(size_ob, 32, 8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1),
+            nn.ReLU())
+
+        self.linear = nn.Sequential(
+            nn.Linear(3136, 512),
+            nn.ReLU())
+
+        self.advantage_out = nn.Linear(512, size_action)
+
+        self.value_out = nn.Linear(512, 1)
+
+    def forward(self, ob):
+        features = self.cnn(ob.float())
+        if(len(ob.shape)==4):
+            features = torch.flatten(features, start_dim=1)
+        else:
+            features = torch.flatten(features)
+
+        features = self.linear(features)
+        values = self.value_out(features)
+
+        advantages = self.advantage_out(features)
+
+        return values + (advantages - advantages.mean())
+
+
+
 
 class Critic(nn.Module):
 

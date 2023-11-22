@@ -76,7 +76,7 @@ if __name__ == '__main__':
         agent = DQNAgent(env.observation_space, env.action_space, hyperParams, cnn=cnn)
     elif(args.algorithm == "3DQN"):
         hyperParams = DQNHyperParams()
-        agent = DQNAgent(env.observation_space, env.action_space, hyperParams, double=True, duelling=True)
+        agent = DQNAgent(env.observation_space, env.action_space, hyperParams, double=True, duelling=True, cnn=cnn)
     elif(args.algorithm == "TD3"):
         hyperParams = TD3HyperParams()
         agent = TD3Agent(env.observation_space, env.action_space, hyperParams, cuda=args.cuda)
@@ -95,28 +95,31 @@ if __name__ == '__main__':
         if(args.algorithm == "PPO"):
             agent.start_episode()
         ob = env.reset()[0]
+        prec_lives = 5
         sum_rewards=0
         steps=0
-        nb_noop_at_start = 0
+        nb_noop = 0
         while True:
             ob_prec = ob   
             action, infos = agent.act(ob)
-            #print("\rAction: {}, Step: {}, sr: {}, noop: {}".format(action, steps, sum_rewards, nb_noop_at_start), end="")
-            ob, reward, done, _, _ = env.step(action)
+            #print("\rAction: {}, Step: {}, sr: {}, noop: {}".format(action, steps, sum_rewards, nb_noop), end="")
+            ob, reward, done, _, info = env.step(action)
+            done_lives = True
             if("ALE" in args.module):
                 reward = np.clip(reward, -1, 1)
-                if(nb_noop_at_start >= 0):
-                    if(action != 1):
-                        nb_noop_at_start += 1
-                    else:
-                        nb_noop_at_start = -1
+                done_lives = prec_lives != info["lives"]
+                prec_lives = info["lives"]
+                if(action == 0):
+                    nb_noop += 1
+                else:
+                    nb_noop = 0
 
-            agent.memorize(ob_prec, action, ob, reward, done, infos)
+            agent.memorize(ob_prec, action, ob, reward, done or done_lives, infos)
             sum_rewards += reward
             if(args.algorithm != "PPO" and steps%hyperParams.LEARN_EVERY == 0 and len(agent.buffer) > hyperParams.LEARNING_START):
                 agent.learn()
             steps+=1
-            if done or steps > hyperParams.MAX_STEPS or nb_noop_at_start > 30:
+            if done or steps > hyperParams.MAX_STEPS or nb_noop > 30:
                 if("DQN" not in args.algorithm):
                     agent.end_episode()
                     if(args.algorithm == "PPO" and len(agent.batch_rewards) > hyperParams.MAXLEN):

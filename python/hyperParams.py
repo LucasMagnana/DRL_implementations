@@ -28,8 +28,8 @@ class TD3HyperParams :
 #Cartpole hyper parameters (solves it but not optimal)
 class DQNHyperParams :
     def __init__(self):
-        self.BUFFER_SIZE = 1e6
-        self.TAU = 1/10000
+        self.BUFFER_SIZE = 200000
+        self.TARGET_UPDATE = 10000
         self.GAMMA = 0.99
         self.LR = 0.00025
         self.BATCH_SIZE = 32
@@ -44,7 +44,7 @@ class DQNHyperParams :
 
         self.EPSILON = 1.0
         self.MIN_EPSILON = 0.1
-        self.EPSILON_DECAY = self.EPSILON/(self.BUFFER_SIZE)
+        self.EPSILON_DECAY = self.EPSILON/1e6
 
 
 class REINFORCEHyperParams :

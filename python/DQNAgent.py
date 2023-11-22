@@ -11,7 +11,7 @@ import copy
 import numpy as np
 import torch
 
-from python.NeuralNetworks import Actor, DuellingActor, Actor_CNN, Critic_CNN
+from python.NeuralNetworks import Actor, DuellingActor, DuellingActor_CNN, Actor_CNN, Critic_CNN
 
 class DQNAgent(object):
     def __init__(self, observation_space, action_space, hyperParams, test=False, double=False, duelling=False, PER=False, cuda=False,\
@@ -31,7 +31,7 @@ class DQNAgent(object):
             else:
                 self.buffer = torchrl.data.ReplayBuffer(int(self.hyperParams.BUFFER_SIZE))
 
-        self.tau = self.hyperParams.TAU
+        #self.tau = self.hyperParams.TAU
         self.epsilon = self.hyperParams.EPSILON
         self.gamma = self.hyperParams.GAMMA
 
@@ -40,7 +40,10 @@ class DQNAgent(object):
         self.duelling = duelling
         self.cnn = cnn
         if(self.cnn):
-            self.actor = Actor_CNN(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) 
+            if(self.duelling):
+                self.actor = DuellingActor_CNN(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) 
+            else:
+                self.actor = Actor_CNN(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) 
         elif(self.duelling):
             self.actor = DuellingActor(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) 
         else:
@@ -60,6 +63,8 @@ class DQNAgent(object):
         self.observation_space = observation_space
 
         self.double = double
+
+        self.learning_step = 0
         
         
 
@@ -106,7 +111,7 @@ class DQNAgent(object):
         else:
             self.epsilon = 0'''
 
-        
+        self.learning_step += 1
         #actual noise decaying method, works well with the custom env
         self.epsilon -= self.hyperParams.EPSILON_DECAY
         if(self.epsilon<self.hyperParams.MIN_EPSILON):
@@ -159,5 +164,10 @@ class DQNAgent(object):
         tens_loss.backward() #compute the gradient
         self.optimizer.step() #back-propagate the gradient
 
-        for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()): #updates the target network
-            target_param.data.copy_(self.tau * param + (1-self.tau)*target_param )
+
+        if(self.learning_step % self.hyperParams.TARGET_UPDATE == 0):
+            self.actor_target.load_state_dict(self.actor.state_dict())
+
+        '''for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()): #updates the target network
+            target_param.data.copy_(self.tau * param + (1-self.tau)*target_param )'''
+        
