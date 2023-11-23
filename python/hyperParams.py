@@ -71,10 +71,10 @@ class PPOHyperParams :
         self.HIDDEN_SIZE_2 = 256
 
         self.TRAINING_FRAMES = 1e6
-        self.K = 10
+        self.K = 5
 
-        self.BATCH_SIZE = 32
-        self.MAXLEN = 1000
+        self.BATCH_SIZE = 256
+        self.LEARN_EVERY = 5
 
         self.MAX_STEPS = 1e10
 

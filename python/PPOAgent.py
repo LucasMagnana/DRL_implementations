@@ -12,7 +12,9 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions.multivariate_normal import MultivariateNormal
 
-from python.NeuralNetworks import PPO_Actor, PPO_Critic, Actor_CNN, Critic_CNN
+from torch.distributions.categorical import Categorical
+
+from python.NeuralNetworks import PPO_Actor, PPO_Critic, PPO_Model_CNN
 from python.utils import discount_rewards, gae
 
 
@@ -26,7 +28,7 @@ class PPOAgent():
 
         if(cnn):
             self.ac_space = ac_space.n  
-            self.actor = Actor_CNN(ob_space.shape[0], self.ac_space, hyperParams, ppo=True)
+            self.actor = PPO_Model_CNN(ob_space.shape[0], self.ac_space)
 
         elif(self.continuous_action_space):
             self.ac_space = ac_space.shape[0]
@@ -40,14 +42,10 @@ class PPOAgent():
             self.actor.load_state_dict(torch.load(actor_to_load))
             self.actor.eval()
 
-        if(cnn):
-            self.critic = Critic_CNN(ob_space.shape[0], hyperParams)
-        else:
-            self.critic = PPO_Critic(ob_space.shape[0], hyperParams)
+        self.critic = PPO_Critic(ob_space.shape[0], hyperParams)
 
         # Define optimizer
-        self.optimizer_actor = torch.optim.Adam(self.actor.parameters(), lr=self.hyperParams.LR)
-        self.optimizer_critic = torch.optim.Adam(self.critic.parameters(), lr=self.hyperParams.LR)
+        self.optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.hyperParams.LR)
         self.mse = torch.nn.MSELoss()
 
         
@@ -94,24 +92,26 @@ class PPOAgent():
 
                 action_tensor = torch.tensor(np.array(self.batch_actions[i:i+self.hyperParams.BATCH_SIZE]))
                 
-                # Calculate actor loss
+                '''# Calculate actor loss
                 values_tensor = self.critic(state_tensor)
-                values_tensor = values_tensor.flatten()
+                values_tensor = values_tensor.flatten()'''
 
                 if(self.continuous_action_space):
                     action_exp, action_std = self.actor(state_tensor)
                     mat_std = torch.diag_embed(action_std)
                     dist = MultivariateNormal(action_exp, mat_std)
-                    selected_probs_tensor = dist.log_prob(action_tensor)
-                    ratios = torch.exp(selected_probs_tensor - old_selected_probs_tensor.detach())
 
                 else:
                     # Actions are used as indices, must be 
                     # LongTensor
-                    probs = self.actor(state_tensor)
+                    action_probs, val = self.actor(state_tensor)
+                    values_tensor = val.flatten()
                     action_tensor = action_tensor.long()
-                    selected_probs_tensor = torch.index_select(probs, 1, action_tensor).diag()
-                    ratios = selected_probs_tensor/old_selected_probs_tensor
+                    dist = Categorical(logits=action_probs)
+                    action_probs = action_probs.detach().numpy()
+
+                selected_probs_tensor = dist.log_prob(action_tensor)
+                ratios = torch.exp(selected_probs_tensor - old_selected_probs_tensor.detach())
 
                 
                 #advantages_tensor = rewards_tensor - values_tensor.detach()   
@@ -132,21 +132,19 @@ class PPOAgent():
 
                 loss_critic = self.mse(values_tensor, rewards_tensor)
             
+                loss = loss_actor+loss_critic
 
-
-                self.tab_losses.append((loss_actor.item()+loss_critic.item())/2)
+                self.tab_losses.append((loss_actor.item()+loss_critic.item()))
 
                 #print("Loss :", self.tab_losses[-1])
 
                 # Reset gradients
-                self.optimizer_actor.zero_grad()
-                self.optimizer_critic.zero_grad()
+                self.optimizer.zero_grad()
                 # Calculate gradients
-                loss_actor.backward()
-                loss_critic.backward()
+                loss.backward()
                 # Apply gradients
-                self.optimizer_actor.step()
-                self.optimizer_critic.step()
+                nn.utils.clip_grad_norm_(self.actor.parameters(), 0.5)
+                self.optimizer.step()
 
         self.reset_batches()
 
@@ -190,8 +188,8 @@ class PPOAgent():
 
     def act(self, observation):
         # Get actions and convert to numpy array
-        val = self.critic(torch.tensor(np.array(observation)))
-        val = val.detach().numpy()
+        #val = self.critic(torch.tensor(np.array(observation)))
+        #val = val.detach().numpy()
         if(self.continuous_action_space):
             action_exp, action_std = self.actor(torch.tensor(observation))
             std_mat = torch.diag(action_std)
@@ -200,10 +198,11 @@ class PPOAgent():
             action_probs = dist.log_prob(action).detach().numpy()
             action = action.detach().numpy()
         else:
-            action_probs = self.actor(torch.tensor(np.array(observation)))
+            action_probs, val = self.actor(torch.tensor(np.array(observation)))
+            dist = Categorical(logits=action_probs)
             action_probs = action_probs.detach().numpy()
-            action = np.random.choice(np.arange(self.ac_space), p=action_probs)
+            action = dist.sample()
 
         self.num_decisions_made += 1
 
-        return action, (val, action_probs)
+        return action, (val.detach().numpy(), action_probs)

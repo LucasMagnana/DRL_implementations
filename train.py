@@ -93,13 +93,13 @@ if __name__ == '__main__':
 
             agent.memorize(ob_prec, action, ob, reward, done or done_lives, infos)
             sum_rewards += reward
-            if(args.algorithm != "PPO" and steps%hyperParams.LEARN_EVERY == 0 and len(agent.buffer) > hyperParams.LEARNING_START):
+            if(args.algorithm != "PPO" and len(agent.buffer) > hyperParams.LEARNING_START):
                 agent.learn()
             steps+=1
             if done or steps > hyperParams.MAX_STEPS or nb_noop > 30:
                 if("DQN" not in args.algorithm):
                     agent.end_episode()
-                    if(args.algorithm == "PPO" and len(agent.batch_rewards) > hyperParams.MAXLEN):
+                    if(args.algorithm == "PPO" and ep > 0 and ep%hyperParams.LEARN_EVERY==0): #len(agent.batch_rewards) > hyperParams.MAXLEN):
                         agent.learn()
 
                 tab_sum_rewards.append(sum_rewards)   
