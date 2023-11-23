@@ -68,13 +68,16 @@ class DQNAgent(object):
         self.double = double
 
         self.learning_step = 0
+        self.memorize_step = 0
+
+        self.loss = MSELoss()
         
         
 
 
     def act(self, observation):
         #return self.action_space.sample()
-        observation = torch.tensor(observation, device=self.device)
+        observation = torch.tensor(np.array(observation), device=self.device)
         tens_qvalue = self.actor(observation) #compute the qvalues for the observation
         tens_qvalue = tens_qvalue.squeeze()
         rand = random()
@@ -91,42 +94,43 @@ class DQNAgent(object):
             return self.buffer.sample(len(self.buffer))
         else:
             return self.buffer.sample(self.batch_size)
+            
 
     def memorize(self, ob_prec, action, ob, reward, done, infos):
         if(self.cnn):
-            if(self.original_image == None):
-                self.original_image = torch.tensor(ob)
-            modifs_ob = compute_modifications(self.original_image, torch.tensor(ob))
-            modifs_ob_prec = compute_modifications(self.original_image, torch.tensor(ob_prec))
-            self.list_modifs.append(modifs_ob_prec)
-            experience = torch.tensor(len(self.list_modifs)-1)
-            experience = np.append(experience, action)
-            self.list_modifs.append(modifs_ob)
-            experience = np.append(experience, len(self.list_modifs)-1)
+            experience = copy.deepcopy(ob_prec)
         else:
             experience = copy.deepcopy(ob_prec).flatten()
-            experience = np.append(experience, action)
+        experience = np.append(experience, action)
+        if(self.cnn):
+            experience = np.append(experience, ob)
+        else:
             experience = np.append(experience, ob.flatten())
-            
         experience = np.append(experience, reward)
         experience = np.append(experience, not(done))
-        self.buffer.add(torch.FloatTensor(experience, device=self.device))   
+        self.buffer.add(torch.ByteTensor(experience, device=self.device))   
+
+    '''def memorize(self, ob_prec, action, ob, reward, done, infos):
+        if(self.cnn):
+            if(self.original_image == None):
+                self.original_image = torch.tensor(np.array(ob))
+            modifs_ob = compute_modifications(self.original_image, torch.tensor(np.array(ob)))
+            modifs_ob_prec = compute_modifications(self.original_image, torch.tensor(np.array(ob_prec)))
+            if(self.memorize_step < self.hyperParams.BUFFER_SIZE):
+                self.buffer.append([torch.ByteTensor(np.array(ob_prec)), action, torch.ByteTensor(np.array(ob)), reward, not(done)])
+            else:
+                self.buffer[self.memorize_step%self.hyperParams.BUFFER_SIZE] = [torch.ByteTensor(np.array(ob_prec)), action,\
+                torch.ByteTensor(np.array(ob)), reward, not(done)]
+            self.memorize_step += 1'''
+
 
     def learn(self, n_iter=None):
-
-        #previous noise decaying method, works well with cartpole
-        '''if(self.epsilon > self.hyperParams.MIN_EPSILON):
-            self.epsilon *= self.hyperParams.EPSILON_DECAY
-        else:
-            self.epsilon = 0'''
-
         self.learning_step += 1
         #actual noise decaying method, works well with the custom env
         self.epsilon -= self.hyperParams.EPSILON_DECAY
         if(self.epsilon<self.hyperParams.MIN_EPSILON):
             self.epsilon=self.hyperParams.MIN_EPSILON
 
-        loss = MSELoss()
 
         spl = self.sample()  #create a batch of experiences
         if(self.PER):
@@ -134,18 +138,9 @@ class DQNAgent(object):
             spl = spl[0]
 
         if(self.cnn):
-            spl = torch.split(spl, [1, 1, 1, 1, 1], dim=1)
-            for i in range(len(spl[0])):
-                state = modify_image(self.original_image, self.list_modifs[int(spl[0][i].item())])
-                state_next = modify_image(self.original_image, self.list_modifs[int(spl[2][i].item())])
-                if(i == 0):
-                    tens_state = state
-                    tens_state_next = state_next
-                else:
-                    tens_state = torch.cat((tens_state, state))
-                    tens_state_next = torch.cat((tens_state_next, state_next))
-            tens_state = torch.reshape(tens_state, (32, 4, 84, 84))
-            tens_state_next = torch.reshape(tens_state_next, (32, 4, 84, 84))
+            spl = torch.split(spl, [4*84*84, 1, 4*84*84, 1, 1], dim=1)
+            tens_state = torch.reshape(spl[0], [32, 4, 84, 84])
+            tens_state_next = torch.reshape(spl[2], [32, 4, 84, 84])
         else:
             spl = torch.split(spl, [self.observation_space.shape[0], 1, self.observation_space.shape[0], 1, 1], dim=1)
             tens_state = spl[0]
@@ -178,7 +173,7 @@ class DQNAgent(object):
             
 
         self.optimizer.zero_grad() #reset the gradient
-        tens_loss = loss(tens_qvalue, tens_reward+(self.gamma*tens_next_qvalue)*tens_done) #calculate the loss
+        tens_loss = self.loss(tens_qvalue, tens_reward+(self.gamma*tens_next_qvalue)*tens_done) #calculate the loss
         tens_loss.backward() #compute the gradient
         self.optimizer.step() #back-propagate the gradient
 
@@ -188,4 +183,61 @@ class DQNAgent(object):
 
         '''for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()): #updates the target network
             target_param.data.copy_(self.tau * param + (1-self.tau)*target_param )'''
+
+
+'''
+CODE FOR TORCHRL EXPERIENCE REPLAY
+
+    def memorize_ER(self, ob_prec, action, ob, reward, done, infos):
+        if(self.cnn):
+            if(self.original_image == None):
+                self.original_image = torch.tensor(ob)
+            modifs_ob = compute_modifications(self.original_image, torch.tensor(ob))
+            modifs_ob_prec = compute_modifications(self.original_image, torch.tensor(ob_prec))
+            self.list_modifs.append(modifs_ob_prec)
+            self.list_modifs.append(modifs_ob)
+            experience = torch.tensor(len(self.list_modifs)-2)
+            experience = np.append(experience, action)
+            experience = np.append(experience, len(self.list_modifs)-1)
+        else:
+            experience = copy.deepcopy(ob_prec).flatten()
+            experience = np.append(experience, action)
+            experience = np.append(experience, ob.flatten())
+            
+        experience = np.append(experience, reward)
+        experience = np.append(experience, not(done))
+        self.buffer.add(torch.FloatTensor(experience, device=self.device))   
+
+SAMPLE :
+spl = self.sample()  #create a batch of experiences
+        if(self.PER):
+            datas = spl[1]
+            spl = spl[0]
+
+        if(self.cnn):
+            spl = torch.split(spl, [1, 1, 1, 1, 1], dim=1)
+            for i in range(len(spl[0])):
+                state = modify_image(self.original_image, self.list_modifs[int(spl[0][i].item())])
+                state_next = modify_image(self.original_image, self.list_modifs[int(spl[2][i].item())])
+                if(i == 0):
+                    tens_state = state
+                    tens_state_next = state_next
+                else:
+                    tens_state = torch.cat((tens_state, state))
+                    tens_state_next = torch.cat((tens_state_next, state_next))
+            tens_state = torch.reshape(tens_state, (32, 4, 84, 84))
+            tens_state_next = torch.reshape(tens_state_next, (32, 4, 84, 84))
+        else:
+            spl = torch.split(spl, [self.observation_space.shape[0], 1, self.observation_space.shape[0], 1, 1], dim=1)
+            tens_state = spl[0]
+            tens_state_next = spl[2]
+
+
+
+        tens_action = spl[1].squeeze().long()
+
+        tens_reward = spl[3].squeeze()
+
+        tens_done = spl[4].squeeze().bool()
+'''
         
