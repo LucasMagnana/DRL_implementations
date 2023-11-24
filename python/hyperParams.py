@@ -40,7 +40,7 @@ class DQNHyperParams :
         self.TRAINING_FRAMES = 1e7
         self.MAX_STEPS = 1e10
         self.LEARNING_START = 5e4
-        self.LEARN_EVERY = 1
+        self.LEARN_EVERY = 4
 
         self.EPSILON = 1.0
         self.MIN_EPSILON = 0.1

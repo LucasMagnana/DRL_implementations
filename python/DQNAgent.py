@@ -2,7 +2,7 @@
 import random
 from random import sample, random, randint
 
-from torch.nn import MSELoss
+from torch.nn import MSELoss, HuberLoss
 import torchrl
 
 import numpy as np
@@ -61,16 +61,15 @@ class DQNAgent(object):
         
         self.actor_target = copy.deepcopy(self.actor) #a target network is used to make the convergence possible (see papers on DRL)
 
-        self.optimizer = torch.optim.Adam(self.actor.parameters(), self.hyperParams.LR) # smooth gradient descent
+        self.optimizer = torch.optim.RMSprop(self.actor.parameters(), self.hyperParams.LR, alpha=0.95, momentum=0.95, eps=0.1) # smooth gradient descent
 
         self.observation_space = observation_space
 
         self.double = double
 
-        self.learning_step = 0
-        self.memorize_step = 0
+        self.target_update_counter = 0
 
-        self.loss = MSELoss()
+        self.loss = HuberLoss()
         
         
 
@@ -86,7 +85,7 @@ class DQNAgent(object):
             action = indices.item() #return it
         else:
             action = randint(0, tens_qvalue.size()[0]-1) #choose a random action
-
+        self.target_update_counter += 1
         return action, None
 
     def sample(self):
@@ -125,7 +124,6 @@ class DQNAgent(object):
 
 
     def learn(self, n_iter=None):
-        self.learning_step += 1
         #actual noise decaying method, works well with the custom env
         self.epsilon -= self.hyperParams.EPSILON_DECAY
         if(self.epsilon<self.hyperParams.MIN_EPSILON):
@@ -178,8 +176,9 @@ class DQNAgent(object):
         self.optimizer.step() #back-propagate the gradient
 
 
-        if(self.learning_step % self.hyperParams.TARGET_UPDATE == 0):
+        if(self.target_update_counter >= self.hyperParams.TARGET_UPDATE):
             self.actor_target.load_state_dict(self.actor.state_dict())
+            self.target_update_counter = 0
 
         '''for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()): #updates the target network
             target_param.data.copy_(self.tau * param + (1-self.tau)*target_param )'''
