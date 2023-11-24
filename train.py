@@ -2,6 +2,7 @@ import argparse
 import sys
 import gym 
 import numpy as np
+import random
 from gym.wrappers import GrayScaleObservation, FrameStack, ResizeObservation
 
 import datetime as dt
@@ -39,10 +40,8 @@ if __name__ == '__main__':
         env = gym.make(args.module, render_mode="human") #gym env
     elif("ALE" in args.module):
         cnn = True
-        env = gym.make(args.module, frameskip=4)
+        env = gym.make(args.module, frameskip=1, obs_type="grayscale")
         env = ResizeObservation(env, shape=84)
-        env = GrayScaleObservation(env)
-        env = FrameStack(env, num_stack=4)
 
     else:
         env = gym.make(args.module) #gym env
@@ -71,32 +70,52 @@ if __name__ == '__main__':
             save(tab_sum_rewards, tab_mean_rewards, args.module.removeprefix("ALE/"), args, agent, hyperParams)
         if(args.algorithm == "PPO"):
             agent.start_episode()
-        ob = env.reset()[0]
-        prec_lives = 5
+        if("ALE" in args.module):
+            env.reset()
+            ob = []
+            for _ in range(4):
+                ob_env, reward_env, done, _, info_env = env.step(0)
+                ob.append(ob_env.squeeze())
+            ob = np.stack(ob)
+            lives = info_env["lives"]
+        else:
+            ob = env.reset()[0]
         sum_rewards=0
         steps=0
-        nb_noop = 0
         while True:
             ob_prec = ob   
             action, infos = agent.act(ob)
             #print("\rAction: {}, Step: {}, sr: {}, noop: {}".format(action, steps, sum_rewards, nb_noop), end="")
-            ob, reward, done, _, info = env.step(action)
-            done_lives = True
             if("ALE" in args.module):
-                reward = np.clip(reward, -1, 1)
-                done_lives = prec_lives != info["lives"]
-                prec_lives = info["lives"]
-                if(action == 0):
-                    nb_noop += 1
-                else:
-                    nb_noop = 0
+                prec_lives = lives
+                ob = []
+                ob_inter = []
+                reward = 0
+                done = False
+                for _ in range(hyperParams.REPEAT_ACTION*hyperParams.FRAME_SKIP):
+                    if(not done):
+                        ob_env, reward_env, done, _, info_env = env.step(action)
+                        ob_inter.append(ob_env.squeeze())
+                        reward += reward_env
+                        lives = info_env["lives"]
+                    else:
+                        ob_inter.append(ob_inter[-1]) 
 
-            agent.memorize(ob_prec, action, ob, reward, done or done_lives, infos)
+                for i in range(hyperParams.FRAME_SKIP, hyperParams.REPEAT_ACTION*hyperParams.FRAME_SKIP+hyperParams.FRAME_SKIP, hyperParams.FRAME_SKIP):
+                    ob.append(np.maximum(ob_inter[i-1], ob_inter[i-2]))
+
+                ob = np.stack(ob)
+                done_lives = lives != prec_lives
+                reward = np.clip(reward, -1, 1)
+                agent.memorize(ob_prec, action, ob, reward, done or done_lives, infos)
+            else:
+                ob, reward, done, _, info = env.step(action)
+                agent.memorize(ob_prec, action, ob, reward, done, infos)
             sum_rewards += reward
             if(args.algorithm != "PPO" and len(agent.buffer) > hyperParams.LEARNING_START):
                 agent.learn()
             steps+=1
-            if done or steps > hyperParams.MAX_STEPS or nb_noop > 30:
+            if done or steps > hyperParams.MAX_STEPS:
                 if("DQN" not in args.algorithm):
                     agent.end_episode()
                     if(args.algorithm == "PPO" and ep > 0 and ep%hyperParams.LEARN_EVERY==0): #len(agent.batch_rewards) > hyperParams.MAXLEN):

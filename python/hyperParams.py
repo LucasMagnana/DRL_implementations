@@ -41,7 +41,9 @@ class DQNHyperParams :
         self.MAX_STEPS = 1e10
         self.LEARNING_START = 5e4
         self.LEARN_EVERY = 4
-
+        self.FRAME_SKIP = 4
+        self.REPEAT_ACTION = 4
+        
         self.EPSILON = 1.0
         self.MIN_EPSILON = 0.1
         self.EPSILON_DECAY = self.EPSILON/1e6

@@ -214,7 +214,7 @@ class Actor_CNN(nn.Module):
         super(Actor_CNN, self).__init__()
 
         self.cnn = nn.Sequential(
-            nn.Conv2d(size_ob, 32, 8, stride=4),
+            nn.Conv2d(4, 32, 8, stride=4),
             nn.ReLU(),
             nn.Conv2d(32, 64, 4, stride=2),
             nn.ReLU(),
