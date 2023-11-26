@@ -69,7 +69,7 @@ class DuellingActor_CNN(nn.Module):
 
         self.linear = nn.Sequential(
             nn.Linear(3136, 512),
-            nn.ReLU())
+            nn.LeakyReLU())
 
         self.advantage_out = nn.Linear(512, size_action)
 
@@ -171,40 +171,6 @@ class PPO_Critic(nn.Module):
     
     def forward(self, ob):
         return self.critic(ob.float())
-    
-
-
-class PPO_Model_CNN(nn.Module):
-    def __init__(self, size_ob, size_action):
-        super(PPO_Model_CNN, self).__init__()
-
-        self.cnn = nn.Sequential(
-            nn.Conv2d(size_ob, 32, 8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, 4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, stride=1),
-            nn.ReLU())
-        
-        self.features = nn.Sequential(
-            nn.Linear(3136, 512),
-            nn.ReLU())
-        print(size_action, nn.Linear(512, size_action))
-        self.actor = nn.Linear(512, size_action)
-        self.critic = nn.Linear(512, 1)
-
-
-            
-    def forward(self, ob):
-        features = self.cnn(ob.float())
-        if(len(ob.shape)==4):
-            features = torch.flatten(features, start_dim=1)
-        else:
-            features = torch.flatten(features)
-        features = self.features(features)
-        return nn.functional.softmax(self.actor(features)), self.critic(features)
-
-
 
 
 
@@ -214,7 +180,7 @@ class Actor_CNN(nn.Module):
         super(Actor_CNN, self).__init__()
 
         self.cnn = nn.Sequential(
-            nn.Conv2d(4, 32, 8, stride=4),
+            nn.Conv2d(size_ob, 32, 8, stride=4),
             nn.ReLU(),
             nn.Conv2d(32, 64, 4, stride=2),
             nn.ReLU(),

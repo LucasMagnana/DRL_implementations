@@ -25,11 +25,28 @@ class TD3HyperParams :
         self.EXPLORATION_NOISE = 0.1
 
 
-#Cartpole hyper parameters (solves it but not optimal)
-class DQNHyperParams :
+class DQNCNNHyperParams :
     def __init__(self):
-        self.BUFFER_SIZE = 1e6
-        self.TARGET_UPDATE = 1e4
+        self.BUFFER_SIZE = 1e5
+        self.TARGET_UPDATE = 1e3
+        self.GAMMA = 0.99
+        self.LR = 2.5e-4
+        self.BATCH_SIZE = 32
+
+        self.TRAINING_FRAMES = 4e6
+        self.MAX_STEPS = 1e10
+        self.LEARNING_START = 5e3
+        self.LEARN_EVERY = 4
+
+        self.EPSILON = 1.0
+        self.MIN_EPSILON = 0.1
+        self.EPSILON_DECAY = self.EPSILON/(self.TRAINING_FRAMES*1/10)
+
+#CARTPOLE
+class DQNHyperParams : 
+    def __init__(self):
+        self.BUFFER_SIZE = 1e5
+        self.TARGET_UPDATE = 1e3
         self.GAMMA = 0.99
         self.LR = 2.5e-4
         self.BATCH_SIZE = 32
@@ -37,16 +54,14 @@ class DQNHyperParams :
         self.HIDDEN_SIZE_1 = 64
         self.HIDDEN_SIZE_2 = 64
 
-        self.TRAINING_FRAMES = 1e7
-        self.MAX_STEPS = 1e10
-        self.LEARNING_START = 5e4
+        self.TRAINING_FRAMES = 1e5
+        self.MAX_STEPS = 1000
+        self.LEARNING_START = 64
         self.LEARN_EVERY = 4
-        self.FRAME_SKIP = 4
-        self.REPEAT_ACTION = 4
-        
+
         self.EPSILON = 1.0
         self.MIN_EPSILON = 0.1
-        self.EPSILON_DECAY = self.EPSILON/1e6
+        self.EPSILON_DECAY = self.EPSILON/(self.TRAINING_FRAMES*1/10)
 
 
 class REINFORCEHyperParams :
@@ -64,7 +79,7 @@ class REINFORCEHyperParams :
 
 class PPOHyperParams :
     def __init__(self):
-        self.LR = 1e-5
+        self.LR = 1e-4
         self.GAMMA = 0.99
         self.LAMBDA = 0.99
         self.EPSILON = 0.1
@@ -72,11 +87,11 @@ class PPOHyperParams :
         self.HIDDEN_SIZE_1 = 256
         self.HIDDEN_SIZE_2 = 256
 
-        self.TRAINING_FRAMES = 1e6
-        self.K = 5
+        self.TRAINING_FRAMES = 1e7
+        self.K = 10
 
-        self.BATCH_SIZE = 256
-        self.LEARN_EVERY = 5
+        self.BATCH_SIZE = 32
+        self.MAXLEN = 1000
 
         self.MAX_STEPS = 1e10
 
