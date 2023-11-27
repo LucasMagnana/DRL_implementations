@@ -10,37 +10,7 @@ import matplotlib.pyplot as plt
 
 import datetime as dt
 
-from python.TD3Agent import *
-from python.DQNAgent import *
-from python.PPOAgent import *
-from python.hyperParams import *
-
-
-def save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams, save_nn=False):
-    #plot the sums of rewards and the noise (noise shouldnt be in the same graph but for now it's good)
-    print()
-    print("Ploting...")
-    plt.close()
-    plt.figure()
-    plt.plot(tab_sum_rewards, alpha=0.75)
-    plt.plot(tab_mean_rewards, color="darkblue")
-    plt.xlabel('Episodes')   
-    plt.ylabel('Sum of rewards')       
-    plt.savefig("./images/"+module+"_"+args.algorithm+".png")
-    
-    if(save_nn):
-        #save the neural networks of the agent
-        print("Saving...")
-        #torch.save(agent.actor_target.state_dict(), './trained_networks/'+module+'_target.n')
-        torch.save(agent.actor.state_dict(), "./trained_networks/"+module+"_"+args.algorithm+".n")
-
-        #save the hyper parameters (for the tests and just in case)
-        with open("./trained_networks/"+module+"_"+args.algorithm+".hp", 'wb') as outfile:
-            pickle.dump(hyperParams, outfile)
-
-
-
-
+from python.utils import *
 
 
 if __name__ == '__main__':
@@ -61,14 +31,11 @@ if __name__ == '__main__':
     print("cuda:", args.cuda)
     if(args.cuda):
         print(torch.cuda.get_device_name(0))
-
-    cnn = False
     
 
     if(args.render):
         env = gym.make(args.module, render_mode="human") #gym env
     elif("ALE" in args.module):
-        cnn = True
         env = gym.make(args.module, frameskip=4, obs_type="grayscale", repeat_action_probability=0)
         env = ResizeObservation(env, shape=84)
         env = FrameStack(env, num_stack=4)
@@ -76,22 +43,7 @@ if __name__ == '__main__':
     else:
         env = gym.make(args.module) #gym env
 
-    if(args.algorithm == "DQN"):
-        hyperParams = DQNHyperParams()
-        agent = DQNAgent(env.observation_space, env.action_space, hyperParams, cnn=cnn)
-    elif(args.algorithm == "3DQN"):
-        if(cnn):
-            hyperParams = DQNCNNHyperParams()
-        else:
-            hyperParams = DQNHyperParams()
-        agent = DQNAgent(env.observation_space, env.action_space, hyperParams, double=True, duelling=True, cnn=cnn)
-    elif(args.algorithm == "TD3"):
-        hyperParams = TD3HyperParams()
-        agent = TD3Agent(env.observation_space, env.action_space, hyperParams, cuda=args.cuda)
-    elif(args.algorithm == "PPO"):
-        hyperParams = PPOHyperParams()
-        agent = PPOAgent(env.observation_space, env.action_space, hyperParams, continuous_action_space=isinstance(env.action_space, gym.spaces.box.Box), cnn=cnn)
-
+    hyperParams, agent = load_agent_and_hp(args, env, isinstance(env.action_space, gym.spaces.box.Box))
 
     print(hyperParams.__dict__) 
     tab_sum_rewards = []

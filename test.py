@@ -2,16 +2,15 @@ import argparse
 import sys
 import gym 
 import pickle
+import numpy as np
+from random import randint
 
-from gym.wrappers import RecordVideo
+from gym.wrappers import RecordVideo, FrameStack, ResizeObservation
 import matplotlib.pyplot as plt
 
 import datetime as dt
 
-from python.TD3Agent import *
-from python.DQNAgent import *
-from python.PPOAgent import *
-from python.hyperParams import *
+from python.utils import *
 
 
 
@@ -33,40 +32,44 @@ if __name__ == '__main__':
         print(torch.cuda.get_device_name(0))
 
 
-    if(args.save):
+    if("ALE" in args.module):
+        env = gym.make(args.module, frameskip=4, obs_type="grayscale", repeat_action_probability=0, render_mode="human", difficulty=1)
+        env = ResizeObservation(env, shape=84)
+        env = FrameStack(env, num_stack=4)
+
+    elif(args.save):
         env = gym.make(args.module, render_mode="rgb_array") #gym en
         env = RecordVideo(env, video_folder='videos')
     else:
         env = gym.make(args.module, render_mode="human") #gym env
 
-    actor_to_load = "./trained_networks/"+args.module+"_"+args.algorithm+".n"
+    actor_to_load = "./files/"+args.module.removeprefix("ALE/")+"_"+args.algorithm+".n"
 
     #load the hyper parameters
-    with open("./trained_networks/"+args.module+"_"+args.algorithm+".hp", 'rb') as infile:
+    with open("./files/"+args.module.removeprefix("ALE/")+"_"+args.algorithm+".hp", 'rb') as infile:
         hyperParams = pickle.load(infile)
 
-    print(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2, hyperParams.LR, hyperParams.EPISODE_COUNT)
+    print(hyperParams.__dict__)
 
-    if(args.algorithm == "DQN"):
-        agent = DQNAgent(env.observation_space, env.action_space, hyperParams, actor_to_load=actor_to_load)
-    elif(args.algorithm == "3DQN"):
-        agent = DQNAgent(env.observation_space, env.action_space, hyperParams, double=True, duelling=True, actor_to_load=actor_to_load)
-    elif(args.algorithm == "TD3"):
-        agent = TD3Agent(env.observation_space, env.action_space, hyperParams, cuda=args.cuda, actor_to_load=actor_to_load)
-    elif(args.algorithm == "PPO"):
-        agent = PPOAgent(env.observation_space, env.action_space, hyperParams, continuous_action_space=isinstance(env.action_space, gym.spaces.box.Box),\
-                         actor_to_load=actor_to_load)
+    hyperParams, agent = load_agent_and_hp(args, env, isinstance(env.action_space, gym.spaces.box.Box), actor_to_load=actor_to_load)
+
     
     tab_sum_rewards = []
 
     for e in range(1):
         ob = env.reset()[0]
+        if("ALE" in args.module):
+            for _ in range(randint(1, 30)):
+                ob, reward, done, _, info = env.step(randint(1,2))
+            ob = np.array(ob).squeeze()
         sum_rewards=0
         steps=0
         while True:
             ob_prec = ob   
             action, infos = agent.act(ob)
             ob, reward, done, _, _ = env.step(action)
+            if("ALE" in args.module):
+                ob = np.array(ob).squeeze()
             sum_rewards += reward
             steps+=1
             if done or steps > hyperParams.MAX_STEPS:

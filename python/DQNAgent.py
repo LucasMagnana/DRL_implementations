@@ -17,9 +17,6 @@ class DQNAgent(object):
     def __init__(self, observation_space, action_space, hyperParams, test=False, double=True, duelling=True, PER=False, cuda=False, actor_to_load=None, cnn=False):
 
         self.hyperParams = hyperParams
-        
-        if(actor_to_load != None): #use the good hyper parameters (loaded if it's a test, written in the code if it's a training)
-            self.hyperParams.EPSILON = 0
 
         self.action_space = action_space 
 
@@ -27,6 +24,7 @@ class DQNAgent(object):
 
         self.epsilon = self.hyperParams.EPSILON
         self.gamma = self.hyperParams.GAMMA
+        self.test = False
 
         self.device = torch.device("cuda" if cuda else "cpu")
 
@@ -45,8 +43,10 @@ class DQNAgent(object):
 
 
         if(actor_to_load != None): #if it's a test, use the loaded NN
+            self.epsilon = 0.05
             self.actor.load_state_dict(torch.load(actor_to_load, map_location=self.device))
             self.actor.eval()
+            self.test = True
         
         self.actor_target = copy.deepcopy(self.actor) #a target network is used to make the convergence possible (see papers on DRL)
 
@@ -65,9 +65,10 @@ class DQNAgent(object):
 
 
     def act(self, observation):
-        self.epsilon -= self.hyperParams.EPSILON_DECAY
-        if(self.epsilon<self.hyperParams.MIN_EPSILON):
-            self.epsilon=self.hyperParams.MIN_EPSILON
+        if(not self.test):
+            self.epsilon -= self.hyperParams.EPSILON_DECAY
+            if(self.epsilon<self.hyperParams.MIN_EPSILON):
+                self.epsilon=self.hyperParams.MIN_EPSILON
         observation = torch.tensor(observation, device=self.device)
         tens_qvalue = self.actor(observation) #compute the qvalues for the observation
         tens_qvalue = tens_qvalue.squeeze()
