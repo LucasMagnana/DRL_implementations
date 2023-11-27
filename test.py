@@ -4,6 +4,7 @@ import gym
 import pickle
 import numpy as np
 from random import randint
+from moviepy.editor import VideoFileClip
 
 from gym.wrappers import RecordVideo, FrameStack, ResizeObservation
 import matplotlib.pyplot as plt
@@ -15,6 +16,10 @@ from python.utils import *
 
 
 if __name__ == '__main__':
+
+    '''videoClip = VideoFileClip("videos/Pong-v5_3DQN.mp4")
+    videoClip.speedx(4).write_gif("images/Pong-v5_3DQN.gif", loop=True)'''
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--cuda", action="store_true")
@@ -31,17 +36,20 @@ if __name__ == '__main__':
     if(args.cuda):
         print(torch.cuda.get_device_name(0))
 
+    render_mode = "human"
+    if(args.save):
+        render_mode="rgb_array"
+
 
     if("ALE" in args.module):
-        env = gym.make(args.module, frameskip=4, obs_type="grayscale", repeat_action_probability=0, render_mode="human", difficulty=1)
+        env = gym.make(args.module, frameskip=4, obs_type="grayscale", repeat_action_probability=0, render_mode=render_mode)
         env = ResizeObservation(env, shape=84)
         env = FrameStack(env, num_stack=4)
-
-    elif(args.save):
-        env = gym.make(args.module, render_mode="rgb_array") #gym en
-        env = RecordVideo(env, video_folder='videos')
     else:
-        env = gym.make(args.module, render_mode="human") #gym env
+        env = gym.make(args.module, render_mode=render_mode) #gym env
+
+    if(args.save):
+        env = RecordVideo(env, video_folder=render_mode)
 
     actor_to_load = "./files/"+args.module.removeprefix("ALE/")+"_"+args.algorithm+".n"
 
@@ -75,6 +83,7 @@ if __name__ == '__main__':
             if done or steps > hyperParams.MAX_STEPS:
                 tab_sum_rewards.append(sum_rewards)            
                 break
+
 
     env.close()
 
