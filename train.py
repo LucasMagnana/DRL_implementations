@@ -4,6 +4,7 @@ import gym
 import pickle
 import numpy as np
 from gym.wrappers import FrameStack, ResizeObservation
+from random import randint
 
 import matplotlib.pyplot as plt
 
@@ -68,7 +69,7 @@ if __name__ == '__main__':
         env = gym.make(args.module, render_mode="human") #gym env
     elif("ALE" in args.module):
         cnn = True
-        env = gym.make(args.module, frameskip=4, obs_type="grayscale")
+        env = gym.make(args.module, frameskip=4, obs_type="grayscale", repeat_action_probability=0)
         env = ResizeObservation(env, shape=84)
         env = FrameStack(env, num_stack=4)
 
@@ -106,6 +107,9 @@ if __name__ == '__main__':
         if(args.algorithm == "PPO"):
             agent.start_episode()
         ob = env.reset()[0]
+        if("ALE" in args.module):
+            for _ in range(randint(1, 30)):
+                ob, reward, done, _, info = env.step(0)
         prec_lives = 5
         sum_rewards=0
         steps=0
