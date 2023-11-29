@@ -33,7 +33,9 @@ class DQNCNNHyperParams :
         self.LR = 2.5e-4
         self.BATCH_SIZE = 32
 
-        self.TRAINING_FRAMES = 1.5e6
+        self.HIDDEN_SIZE_2 = 512
+
+        self.TRAINING_FRAMES = 1e6
         self.MAX_STEPS = 1e10
         self.LEARNING_START = 5e3
         self.LEARN_EVERY = 4

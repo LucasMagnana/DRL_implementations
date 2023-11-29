@@ -2,7 +2,7 @@
 import random
 from random import sample, random, randint
 
-from torch.nn import MSELoss
+from torch.nn import MSELoss, HuberLoss
 from collections import deque
 
 import numpy as np
@@ -30,15 +30,10 @@ class DQNAgent(object):
 
         self.duelling = duelling
         self.cnn = cnn
-        if(self.cnn):
-            if(self.duelling):
-                self.actor = DuellingActor_CNN(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) 
-            else:
-                self.actor = Actor_CNN(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) 
-        elif(self.duelling):
-            self.actor = DuellingActor(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) 
+        if(self.duelling):
+            self.actor = DuellingActor(observation_space.shape[0], action_space.n, self.hyperParams, cnn=cnn).to(self.device) 
         else:
-            self.actor = Actor(observation_space.shape[0], action_space.n, self.hyperParams).to(self.device) #for cartpole
+            self.actor = Actor(observation_space.shape[0], action_space.n, self.hyperParams, cnn=cnn).to(self.device) #for cartpole
         self.batch_size = self.hyperParams.BATCH_SIZE
 
 
@@ -56,19 +51,25 @@ class DQNAgent(object):
 
         self.double = double
 
-        self.learning_step = 0
+        self.update_target = 0
 
         self.tab_max_q = []
+        self.tab_loss = []
+
+        self.loss = HuberLoss()
 
         
         
 
 
     def act(self, observation):
-        if(not self.test):
+        if(not self.test and len(self.buffer) >= self.hyperParams.LEARNING_START):
             self.epsilon -= self.hyperParams.EPSILON_DECAY
             if(self.epsilon<self.hyperParams.MIN_EPSILON):
                 self.epsilon=self.hyperParams.MIN_EPSILON
+
+        self.update_target += 1  
+
         observation = torch.tensor(observation, device=self.device)
         tens_qvalue = self.actor(observation) #compute the qvalues for the observation
         tens_qvalue = tens_qvalue.squeeze()
@@ -90,9 +91,6 @@ class DQNAgent(object):
 
     def learn(self, n_iter=None):
 
-        self.learning_step += 1
-
-        loss = MSELoss()
 
         spl = sample(self.buffer, min(len(self.buffer), self.hyperParams.BATCH_SIZE))
         
@@ -125,13 +123,15 @@ class DQNAgent(object):
             
 
         self.optimizer.zero_grad() #reset the gradient
-        tens_loss = loss(tens_qvalue, tens_reward+(self.gamma*tens_next_qvalue)*tens_done) #calculate the loss
+        tens_loss = self.loss(tens_qvalue, tens_reward+(self.gamma*tens_next_qvalue)*tens_done) #calculate the loss
         tens_loss.backward() #compute the gradient
         self.optimizer.step() #back-propagate the gradient
 
         self.tab_max_q.append(torch.max(tens_qvalue).item())
+        self.tab_loss.append(torch.max(tens_loss).item())
 
         #print(tens_loss.item(), torch.max(tens_qvalue))
         
-        if(self.learning_step % self.hyperParams.TARGET_UPDATE == 0):
+        if(self.update_target/self.hyperParams.TARGET_UPDATE > 1):
             self.actor_target.load_state_dict(self.actor.state_dict())
+            self.update_target = 0

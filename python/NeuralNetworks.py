@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd import Variable
+from math import *
 
 
 
@@ -28,23 +29,36 @@ class Actor(nn.Module):
 
 class DuellingActor(nn.Module):
 
-    def __init__(self, size_ob, size_action, hyperParams, max_action=1, tanh=False): #for saved hyperparameters
+    def __init__(self, size_ob, size_action, hyperParams, cnn=False): #for saved hyperparameters
         super(DuellingActor, self).__init__()
 
-        self.inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE_1)
-        self.feature_out = nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2)
+        if(cnn):
+            self.features = CNN_layers(size_ob, hyperParams)
+        else:
+            l1 = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE_1)
+            torch.nn.init.kaiming_normal_(l1.weight, nonlinearity="relu")
+
+            l2 = nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2)
+            torch.nn.init.kaiming_normal_(l2.weight, nonlinearity="relu")
+
+            self.features = nn.Sequential(
+                l1,
+                nn.ReLU(),
+                l2,
+                nn.ReLU()
+            )
 
         self.advantage_out = nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action)
+        torch.nn.init.kaiming_normal_(self.advantage_out.weight, nonlinearity="relu")
 
         self.value_out = nn.Linear(hyperParams.HIDDEN_SIZE_2, 1)
+        torch.nn.init.kaiming_normal_(self.value_out.weight, nonlinearity="relu")
 
-        self.max_action = max_action
-        self.tanh = tanh
+
 
     def forward(self, ob):
         ob = ob.float()
-        features = nn.functional.relu(self.inp(ob))
-        features = nn.functional.relu(self.feature_out(features))
+        features = self.features(ob)
 
         values = self.value_out(features)
 
@@ -54,40 +68,44 @@ class DuellingActor(nn.Module):
 
 
 
-class DuellingActor_CNN(nn.Module):
+class CNN_layers(nn.Module):
 
-    def __init__(self, size_ob, size_action, hyperParams): #for saved hyperparameters
-        super(DuellingActor_CNN, self).__init__()
+    def __init__(self, size_ob, hyperParams): #for saved hyperparameters
+        super(CNN_layers, self).__init__()
+
+        c1 = nn.Conv2d(size_ob, 32, 8, stride=4)
+        torch.nn.init.kaiming_normal_(c1.weight, nonlinearity="relu")
+
+        c2 = nn.Conv2d(32, 64, 4, stride=2)
+        torch.nn.init.kaiming_normal_(c2.weight, nonlinearity="relu")
+
+        c3 = nn.Conv2d(64, 64, 3, stride=1)
+        torch.nn.init.kaiming_normal_(c3.weight, nonlinearity="relu")
+
+        l1 = nn.Linear(3136, hyperParams.HIDDEN_SIZE_2)
+        torch.nn.init.kaiming_normal_(l1.weight, nonlinearity="relu")
 
         self.cnn = nn.Sequential(
-            nn.Conv2d(size_ob, 32, 8, stride=4),
+            c1,
             nn.ReLU(),
-            nn.Conv2d(32, 64, 4, stride=2),
+            c2,
             nn.ReLU(),
-            nn.Conv2d(64, 64, 3, stride=1),
+            c3,
             nn.ReLU())
 
-        self.linear = nn.Sequential(
-            nn.Linear(3136, 512),
-            nn.LeakyReLU())
+        self.features = nn.Sequential(
+            l1,
+            nn.ReLU())
 
-        self.advantage_out = nn.Linear(512, size_action)
-
-        self.value_out = nn.Linear(512, 1)
 
     def forward(self, ob):
-        features = self.cnn(ob.float())
+        features = self.cnn(ob.float()/255)
         if(len(ob.shape)==4):
             features = torch.flatten(features, start_dim=1)
         else:
             features = torch.flatten(features)
 
-        features = self.linear(features)
-        values = self.value_out(features)
-
-        advantages = self.advantage_out(features)
-
-        return values + (advantages - advantages.mean())
+        return self.features(features)
 
 
 
