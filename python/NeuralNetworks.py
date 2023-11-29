@@ -32,6 +32,8 @@ class DuellingActor(nn.Module):
     def __init__(self, size_ob, size_action, hyperParams, cnn=False): #for saved hyperparameters
         super(DuellingActor, self).__init__()
 
+        self.cnn = cnn
+
         if(cnn):
             self.features = CNN_layers(size_ob, hyperParams)
         else:
@@ -60,9 +62,13 @@ class DuellingActor(nn.Module):
         ob = ob.float()
         features = self.features(ob)
 
-        values = self.value_out(features)
+        if(self.cnn):
+            values = self.value_out(features[0])
+            advantages = self.advantage_out(features[1])
 
-        advantages = self.advantage_out(features)
+        else:
+            values = self.value_out(features)
+            advantages = self.advantage_out(features)
 
         return values + (advantages - advantages.mean())
 
@@ -82,8 +88,10 @@ class CNN_layers(nn.Module):
         c3 = nn.Conv2d(64, 64, 3, stride=1)
         torch.nn.init.kaiming_normal_(c3.weight, nonlinearity="relu")
 
-        l1 = nn.Linear(3136, hyperParams.HIDDEN_SIZE_2)
+        l1 = nn.Linear(3136, hyperParams.HIDDEN_SIZE_2*2)
         torch.nn.init.kaiming_normal_(l1.weight, nonlinearity="relu")
+
+        self.hidden_size = hyperParams.HIDDEN_SIZE_2
 
         self.cnn = nn.Sequential(
             c1,
@@ -91,21 +99,15 @@ class CNN_layers(nn.Module):
             c2,
             nn.ReLU(),
             c3,
-            nn.ReLU())
-
-        self.features = nn.Sequential(
+            nn.ReLU(),
+            nn.Flatten(start_dim=1),
             l1,
             nn.ReLU())
 
 
     def forward(self, ob):
         features = self.cnn(ob.float()/255)
-        if(len(ob.shape)==4):
-            features = torch.flatten(features, start_dim=1)
-        else:
-            features = torch.flatten(features)
-
-        return self.features(features)
+        return torch.split(features, self.hidden_size, dim=1)
 
 
 

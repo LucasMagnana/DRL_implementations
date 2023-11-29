@@ -27,22 +27,24 @@ class TD3HyperParams :
 
 class DQNCNNHyperParams :
     def __init__(self):
-        self.BUFFER_SIZE = 1e5
-        self.TARGET_UPDATE = 1e3
+        self.BUFFER_SIZE = 1e6
+        self.TARGET_UPDATE = 1e4
         self.GAMMA = 0.99
         self.LR = 2.5e-4
         self.BATCH_SIZE = 32
 
         self.HIDDEN_SIZE_2 = 512
 
-        self.TRAINING_FRAMES = 1e6
+        self.TRAINING_FRAMES = 3e7
         self.MAX_STEPS = 1e10
-        self.LEARNING_START = 5e3
+        self.LEARNING_START = 5e4
         self.LEARN_EVERY = 4
 
-        self.EPSILON = 1.0
-        self.MIN_EPSILON = 0.1
-        self.EPSILON_DECAY = self.EPSILON/(self.TRAINING_FRAMES*1/10)
+        self.START_EPSILON = 1.0
+        self.FIRST_MIN_EPSILON = 0.1
+        self.FIRST_EPSILON_DECAY = (self.START_EPSILON-self.FIRST_MIN_EPSILON)/(1e6-self.LEARNING_START)
+        self.MIN_EPSILON = 0.01
+        self.SECOND_EPSILON_DECAY = (self.FIRST_MIN_EPSILON-self.MIN_EPSILON)/1e6
 
 #CARTPOLE
 class DQNHyperParams : 

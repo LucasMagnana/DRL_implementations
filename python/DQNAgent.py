@@ -22,7 +22,9 @@ class DQNAgent(object):
 
         self.buffer = deque()
 
-        self.epsilon = self.hyperParams.EPSILON
+        self.epsilon = self.hyperParams.START_EPSILON
+        self.epsilon_decay_value = self.hyperParams.FIRST_EPSILON_DECAY
+        
         self.gamma = self.hyperParams.GAMMA
         self.test = False
 
@@ -58,19 +60,26 @@ class DQNAgent(object):
 
         self.loss = HuberLoss()
 
-        
+
+
+    def epsilon_decay(self):
+        self.epsilon -= self.epsilon_decay_value
+        if(self.epsilon_decay_value == self.hyperParams.FIRST_EPSILON_DECAY and self.epsilon<self.hyperParams.FIRST_MIN_EPSILON ):
+            self.epsilon = self.hyperParams.FIRST_MIN_EPSILON
+            self.epsilon_decay_value = self.hyperParams.SECOND_EPSILON_DECAY
+        if(self.epsilon < self.hyperParams.MIN_EPSILON):
+            self.epsilon = self.hyperParams.MIN_EPSILON
+
+  
         
 
 
     def act(self, observation):
         if(not self.test and len(self.buffer) >= self.hyperParams.LEARNING_START):
-            self.epsilon -= self.hyperParams.EPSILON_DECAY
-            if(self.epsilon<self.hyperParams.MIN_EPSILON):
-                self.epsilon=self.hyperParams.MIN_EPSILON
-
+            self.epsilon_decay()
         self.update_target += 1  
 
-        observation = torch.tensor(observation, device=self.device)
+        observation = torch.tensor(np.expand_dims(observation, axis=0), device=self.device)
         tens_qvalue = self.actor(observation) #compute the qvalues for the observation
         tens_qvalue = tens_qvalue.squeeze()
         rand = random()
