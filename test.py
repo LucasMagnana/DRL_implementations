@@ -17,8 +17,8 @@ from python.utils import *
 
 if __name__ == '__main__':
 
-    '''videoClip = VideoFileClip("videos/Pong-v5_3DQN.mp4")
-    videoClip.speedx(4).write_gif("images/Pong-v5_3DQN.gif", loop=True)'''
+    '''videoClip = VideoFileClip("rgb_array/Pong-v5_3DQN.mp4")
+    videoClip.speedx(8).write_gif("images/Pong-v5_3DQN.gif", loop=True, fps=120)'''
 
     parser = argparse.ArgumentParser()
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
         ob = env.reset()[0]
         if("ALE" in args.module):
             for _ in range(randint(1, 30)):
-                ob, reward, done, _, info = env.step(randint(1,2))
+                ob, reward, done, _, info = env.step(randint(2,3))
             ob = np.array(ob).squeeze()
         sum_rewards=0
         steps=0
