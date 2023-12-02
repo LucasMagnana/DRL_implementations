@@ -30,7 +30,7 @@ class DQNCNNHyperParams :
         self.BUFFER_SIZE = 1e6
         self.TARGET_UPDATE = 1e4
         self.GAMMA = 0.99
-        self.LR = 2.5e-4
+        self.LR = 1e-5
         self.BATCH_SIZE = 32
 
         self.HIDDEN_SIZE_2 = 512

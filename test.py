@@ -17,8 +17,8 @@ from python.utils import *
 
 if __name__ == '__main__':
 
-    '''videoClip = VideoFileClip("rgb_array/Pong-v5_3DQN.mp4")
-    videoClip.speedx(8).write_gif("images/Pong-v5_3DQN.gif", loop=True, fps=120)'''
+    videoClip = VideoFileClip("rgb_array/rl-video-episode-0.mp4")
+    videoClip.speedx(16).write_gif("images/Pong-v5_3DQN.gif", loop=True, fps=120)
 
     parser = argparse.ArgumentParser()
 
@@ -71,6 +71,7 @@ if __name__ == '__main__':
                 ob, reward, done, _, info = env.step(randint(2,3))
             ob = np.array(ob).squeeze()
         sum_rewards=0
+        clipped_rewards = 0
         steps=0
         while True:
             ob_prec = ob   
@@ -79,6 +80,7 @@ if __name__ == '__main__':
             if("ALE" in args.module):
                 ob = np.array(ob).squeeze()
             sum_rewards += reward
+            clipped_rewards += np.clip(reward, -1, 1)
             steps+=1
             if done or steps > hyperParams.MAX_STEPS:
                 tab_sum_rewards.append(sum_rewards)            
@@ -88,4 +90,4 @@ if __name__ == '__main__':
     env.close()
 
 
-    print("Sum reward : ", sum_rewards) 
+    print("Sum reward :", sum_rewards, "Clipped reward :", clipped_rewards) 
