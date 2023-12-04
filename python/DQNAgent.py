@@ -40,7 +40,7 @@ class DQNAgent(object):
 
 
         if(actor_to_load != None): #if it's a test, use the loaded NN
-            self.epsilon = self.hyperParams.MIN_EPSILON
+            self.epsilon = 0.05
             self.actor.load_state_dict(torch.load(actor_to_load, map_location=self.device))
             self.actor.eval()
             self.test = True

@@ -60,8 +60,8 @@ if __name__ == '__main__':
             agent.start_episode()
         ob = env.reset()[0]
         if("ALE" in args.module):
-            for _ in range(randint(1, 30)):
-                ob, reward, done, _, info = env.step(randint(0,1))
+            for _ in range(randint(1, hyperParams.NOOP)):
+                ob, reward, done, _, info = env.step(0)
         prec_lives = 5
         sum_rewards=0
         steps=0
@@ -72,11 +72,10 @@ if __name__ == '__main__':
             ob, reward, done, _, info = env.step(action)
             done_lives = False
             if("ALE" in args.module):
-                reward = np.clip(reward, -1, 1)
                 done_lives = prec_lives != info["lives"]
                 prec_lives = info["lives"]
 
-            agent.memorize(np.array(ob_prec).squeeze(), action, np.array(ob).squeeze(), reward, done or done_lives, infos)
+            agent.memorize(np.array(ob_prec).squeeze(), action, np.array(ob).squeeze(), np.clip(reward, -1, 1), done or done_lives, infos)
             sum_rewards += reward
             if(args.algorithm != "PPO" and steps%hyperParams.LEARN_EVERY == 0 and len(agent.buffer) > hyperParams.LEARNING_START):
                 agent.learn()

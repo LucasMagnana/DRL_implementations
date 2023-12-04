@@ -4,7 +4,6 @@ import gym
 import pickle
 import numpy as np
 from random import randint
-from moviepy.editor import VideoFileClip
 
 from gym.wrappers import RecordVideo, FrameStack, ResizeObservation
 import matplotlib.pyplot as plt
@@ -16,9 +15,6 @@ from python.utils import *
 
 
 if __name__ == '__main__':
-
-    videoClip = VideoFileClip("rgb_array/rl-video-episode-0.mp4")
-    videoClip.speedx(16).write_gif("images/Pong-v5_3DQN.gif", loop=True, fps=120)
 
     parser = argparse.ArgumentParser()
 
@@ -68,10 +64,9 @@ if __name__ == '__main__':
         ob = env.reset()[0]
         if("ALE" in args.module):
             for _ in range(randint(1, 30)):
-                ob, reward, done, _, info = env.step(randint(2,3))
+                ob, reward, done, _, info = env.step(0)
             ob = np.array(ob).squeeze()
         sum_rewards=0
-        clipped_rewards = 0
         steps=0
         while True:
             ob_prec = ob   
@@ -80,7 +75,6 @@ if __name__ == '__main__':
             if("ALE" in args.module):
                 ob = np.array(ob).squeeze()
             sum_rewards += reward
-            clipped_rewards += np.clip(reward, -1, 1)
             steps+=1
             if done or steps > hyperParams.MAX_STEPS:
                 tab_sum_rewards.append(sum_rewards)            
@@ -90,4 +84,4 @@ if __name__ == '__main__':
     env.close()
 
 
-    print("Sum reward :", sum_rewards, "Clipped reward :", clipped_rewards) 
+    print("Sum reward : ", sum_rewards) 
