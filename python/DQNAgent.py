@@ -33,7 +33,7 @@ class DQNAgent(object):
         self.duelling = duelling
         self.cnn = cnn
         if(self.duelling):
-            self.actor = DuellingActor(observation_space.shape[0], action_space.n, self.hyperParams, cnn=cnn).to(self.device) 
+            self.actor = ActorCritic(observation_space.shape[0], action_space.n, self.hyperParams, cnn=cnn).to(self.device) 
         else:
             self.actor = Actor(observation_space.shape[0], action_space.n, self.hyperParams, cnn=cnn).to(self.device) #for cartpole
         self.batch_size = self.hyperParams.BATCH_SIZE

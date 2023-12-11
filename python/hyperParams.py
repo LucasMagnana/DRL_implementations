@@ -68,6 +68,26 @@ class DQNHyperParams :
         self.MIN_EPSILON = 0.1
         self.EPSILON_DECAY = self.EPSILON/(self.TRAINING_FRAMES*1/10)
 
+#CARTPOLE
+class PPOHyperParams : 
+    def __init__(self):
+        self.GAMMA = 0.99
+        self.LR = 1e-4
+        self.BATCH_SIZE = 256
+
+        self.HIDDEN_SIZE_1 = 256
+        self.HIDDEN_SIZE_2 = 256
+
+        self.TRAINING_FRAMES = 5e5
+        self.MAX_STEPS = 1000
+
+        self.LAMBDA = 0.99
+        self.EPSILON = 0.1
+
+        self.K = 4
+        self.MAXLEN = 1000
+
+
 
 class REINFORCEHyperParams :
     def __init__(self):
@@ -80,24 +100,5 @@ class REINFORCEHyperParams :
 
         self.EPISODE_COUNT = 1000
         self.MAX_STEPS = 1000
-
-
-class PPOHyperParams :
-    def __init__(self):
-        self.LR = 1e-4
-        self.GAMMA = 0.99
-        self.LAMBDA = 0.99
-        self.EPSILON = 0.1
-
-        self.HIDDEN_SIZE_1 = 256
-        self.HIDDEN_SIZE_2 = 256
-
-        self.TRAINING_FRAMES = 1e7
-        self.K = 10
-
-        self.BATCH_SIZE = 32
-        self.MAXLEN = 1000
-
-        self.MAX_STEPS = 1e10
 
 

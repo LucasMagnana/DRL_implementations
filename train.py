@@ -91,8 +91,7 @@ if __name__ == '__main__':
                 total_steps += steps  
                 ep += 1 
                 break
-        print("\rStep: {}, ep: {}, eps: {:.2f}, Average of last 100: {:.2f}, max q: {:.2f}, max loss: {:.10f}".format(total_steps, ep, agent.epsilon,\
-        tab_mean_rewards[-1], sum(agent.tab_max_q)/max(len(agent.tab_max_q), 1), sum(agent.tab_loss)/max(len(agent.tab_loss), 1)), end="")
+        print("\rStep: {}, ep: {}, Average of last 100: {:.2f}".format(total_steps, ep, tab_mean_rewards[-1]), end="")
         
         agent.tab_max_q = []
 

@@ -27,12 +27,14 @@ class Actor(nn.Module):
 
 
 
-class DuellingActor(nn.Module):
+class ActorCritic(nn.Module):
 
-    def __init__(self, size_ob, size_action, hyperParams, cnn=False): #for saved hyperparameters
-        super(DuellingActor, self).__init__()
+    def __init__(self, size_ob, size_action, hyperParams, cnn=False, ppo=False): #for saved hyperparameters
+        super(ActorCritic, self).__init__()
 
         self.cnn = cnn
+
+        self.ppo = ppo
 
         if(cnn):
             self.features = CNN_layers(size_ob, hyperParams)
@@ -70,7 +72,10 @@ class DuellingActor(nn.Module):
             values = self.value_out(features)
             advantages = self.advantage_out(features)
 
-        return values + (advantages - advantages.mean())
+        if(self.ppo):
+            return nn.functional.softmax(advantages, dim=-1), values
+        else:
+            return values + (advantages - advantages.mean())
 
 
 

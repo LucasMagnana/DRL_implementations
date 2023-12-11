@@ -1,6 +1,6 @@
 from python.TD3Agent import *
 from python.DQNAgent import *
-from python.PPOAgent import *
+from python.PPOAgent import PPOAgent
 from python.hyperParams import *
 
 import pickle
@@ -52,4 +52,4 @@ def save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams, sa
         #save the hyper parameters (for the tests and just in case)
         with open("./files/"+module+"_"+args.algorithm+".hp", 'wb') as outfile:
             pickle.dump(hyperParams, outfile)
-        
+  
