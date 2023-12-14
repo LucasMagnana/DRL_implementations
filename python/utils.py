@@ -24,7 +24,10 @@ def load_agent_and_hp(args, env, continuous_action_space, actor_to_load=None):
         hyperParams = TD3HyperParams()
         agent = TD3Agent(env.observation_space, env.action_space, hyperParams, cuda=args.cuda, actor_to_load=actor_to_load)
     elif(args.algorithm == "PPO"):
-        hyperParams = PPOHyperParams()
+        if(cnn):
+            hyperParams = PPOCNNHyperParams()
+        else:
+            hyperParams = PPOHyperParams()
         agent = PPOAgent(env.observation_space, env.action_space, hyperParams, continuous_action_space=continuous_action_space,\
                 actor_to_load=actor_to_load, cnn=cnn)
 

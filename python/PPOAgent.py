@@ -55,13 +55,6 @@ def get_screen(env):
     return resize(screen).unsqueeze(0)
 '''
 
-def discount_rewards(rewards, gamma):
-    r = np.array([gamma**i * rewards[i] for i in range(len(rewards))])
-    # Reverse the array direction for cumsum and then
-    # revert back to the original order
-    r = r[::-1].cumsum()[::-1]
-    return r - r.mean()
-
 
 def discount_rewards(rewards, list_done, gamma):
     r = []
@@ -71,7 +64,7 @@ def discount_rewards(rewards, list_done, gamma):
         discounted_reward = reward + (gamma * discounted_reward)
         r.insert(0, discounted_reward)
     r = np.array(r, dtype=np.single)
-    return r - r.mean()
+    return r
 
 
 def gae(rewards, values, episode_ends, gamma, lam):
@@ -97,7 +90,7 @@ def gae(rewards, values, episode_ends, gamma, lam):
         gae_step = delta + gamma * lam * episode_ends[:, t] * gae_step
         # And store it
         advantages[:, t] = gae_step
-    return advantages
+    return (advantages-advantages.mean())/(advantages.std() + 1e-8)
 
 
 
@@ -124,7 +117,8 @@ class PPOAgent():
 
 
         # Define optimizer
-        self.optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.hyperParams.LR)
+        self.lr = self.hyperParams.LR
+        self.optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.lr)
         self.mse = torch.nn.MSELoss()
 
         
@@ -163,7 +157,7 @@ class PPOAgent():
                 advantages_tensor = torch.tensor(self.batch_advantages[i:i+self.hyperParams.BATCH_SIZE])
                 old_selected_probs_tensor = torch.tensor(self.batch_selected_probs[i:i+self.hyperParams.BATCH_SIZE])
 
-                #old_values_tensor = torch.tensor(self.batch_values[i:i+self.hyperParams.BATCH_SIZE])
+                old_values_tensor = torch.tensor(self.batch_values[i:i+self.hyperParams.BATCH_SIZE])
 
                 rewards_tensor = torch.tensor(self.batch_rewards[i:i+self.hyperParams.BATCH_SIZE])
                 # Normalizing the rewards:
@@ -186,12 +180,10 @@ class PPOAgent():
                     values_tensor = val.flatten()
                     dist = Categorical(probs=action_probs)
 
-                
+                entropy = dist.entropy()
                 selected_probs_tensor = dist.log_prob(action_tensor)
                 ratios = torch.exp(selected_probs_tensor - old_selected_probs_tensor.detach())
-
-                
-                #advantages_tensor = rewards_tensor - values_tensor.detach()   
+                #advantages_tensor = rewards_tensor - values_tensor.detach()  
 
                 loss_actor = ratios*advantages_tensor
                 clipped_loss_actor = torch.clamp(ratios, 1-self.hyperParams.EPSILON, 1+self.hyperParams.EPSILON)*advantages_tensor
@@ -206,12 +198,20 @@ class PPOAgent():
                 loss_critic = 0.5 * torch.max(value_losses, value_losses_clipped)
                 loss_critic = loss_critic.mean()''' 
 
+                value_loss_unclipped = (values_tensor - (old_values_tensor+advantages_tensor))**2
 
-                loss_critic = self.mse(values_tensor, rewards_tensor)
-            
+                values_clipped = old_values_tensor + torch.clamp(values_tensor-old_values_tensor, -self.hyperParams.EPSILON, self.hyperParams.EPSILON)
+                value_loss_clipped = (values_clipped - (old_values_tensor+advantages_tensor))**2
 
-                loss = (loss_actor+loss_critic)/2
-                self.tab_losses.append((loss_actor.item()+loss_critic.item())/2)
+                loss_critic = torch.max(value_loss_clipped, value_loss_unclipped)
+                loss_critic = 0.5*loss_critic.mean()
+
+                #loss_critic = self.mse(values_tensor, rewards_tensor)
+
+                loss_entropy = entropy.mean()
+
+                loss = loss_actor - self.hyperParams.ENTROPY_COEFF * loss_entropy + loss_critic * self.hyperParams.VALUES_COEFF
+                self.tab_losses.append((loss_actor.item()+loss_critic.item()))
 
                 #print("Loss :", self.tab_losses[-1])
 
@@ -219,17 +219,21 @@ class PPOAgent():
                 self.optimizer.zero_grad()
                 # Calculate gradients
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.actor.parameters(), self.hyperParams.MAX_GRAD)
                 # Apply gradients
                 self.optimizer.step()
 
         self.reset_batches()
+
+        self.lr -= self.hyperParams.LR_DECAY
+        self.optimizer.param_groups[0]["lr"] = self.lr
 
 
     def memorize(self, ob_prec, action, ob, reward, done, infos):
         val = infos[0]
         action_probs = infos[1]
         self.states.append(ob_prec)
-        self.values.extend(val)
+        self.values.append(val.item())
         self.rewards.append(reward)
         self.actions.append(action)
         self.selected_probs.append(action_probs.item())
@@ -248,7 +252,7 @@ class PPOAgent():
     def end_episode(self):
         self.list_done[-1] = True
         self.batch_rewards.extend(discount_rewards(self.rewards, self.list_done, self.hyperParams.GAMMA))
-        gaes = gae(np.expand_dims(np.array(self.rewards), 0), np.expand_dims(np.array(self.values), 0), np.expand_dims(np.array([not elem for elem in self.list_done]), 0), self.hyperParams.GAMMA, self.hyperParams.LAMBDA)
+        gaes = gae(np.expand_dims(np.array(self.rewards), 0), np.expand_dims(np.array(self.values), 0), np.expand_dims(np.array([not elem for elem in self.list_done]), 0), self.hyperParams.GAMMA_GAE, self.hyperParams.LAMBDA)
         self.batch_advantages.extend(gaes[0])
         self.batch_states.extend(self.states)
         self.batch_values.extend(self.values)
@@ -266,7 +270,7 @@ class PPOAgent():
             std_mat = torch.diag(action_std)
             dist = MultivariateNormal(action_exp, std_mat)
         else:
-            action_probs, val = self.actor(torch.tensor(observation))
+            action_probs, val = self.actor(torch.tensor(observation).unsqueeze(0))
             action_probs = action_probs.squeeze()
             dist = Categorical(probs=action_probs)
 

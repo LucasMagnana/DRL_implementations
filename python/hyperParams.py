@@ -36,7 +36,7 @@ class DQNCNNHyperParams :
         self.HIDDEN_SIZE_2 = 512
 
         self.TRAINING_FRAMES = 3e7
-        self.MAX_STEPS = 4500
+        self.MAX_STEPS = 18000
         self.LEARNING_START = 5e4
         self.LEARN_EVERY = 4
         self.NOOP = 30
@@ -86,6 +86,39 @@ class PPOHyperParams :
 
         self.K = 4
         self.MAXLEN = 1000
+
+        self.ENTROPY_COEFF = 0.01
+        self.VALUES_COEFF = 0.5
+        self.MAX_GRAD = 0.5
+        self.GAMMA_GAE = 0.95
+        self.LR_DECAY = self.LR/(self.TRAINING_FRAMES/self.MAXLEN)
+
+
+
+class PPOCNNHyperParams : 
+    def __init__(self):
+        self.GAMMA = 0.99
+        self.LR = 2.5e-4
+        self.BATCH_SIZE = 256
+
+        self.HIDDEN_SIZE_1 = 512
+        self.HIDDEN_SIZE_2 = 512
+
+        self.TRAINING_FRAMES = 1e7
+        self.MAX_STEPS = 4500
+
+        self.LAMBDA = 0.99
+        self.EPSILON = 0.1
+
+        self.K = 4
+        self.MAXLEN = 1024
+        self.NOOP = 30
+
+        self.ENTROPY_COEFF = 0.01
+        self.VALUES_COEFF = 0.5
+        self.MAX_GRAD = 0.5
+        self.GAMMA_GAE = 0.95
+        self.LR_DECAY = self.LR/(self.TRAINING_FRAMES/self.MAXLEN)
 
 
 

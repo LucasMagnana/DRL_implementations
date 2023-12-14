@@ -52,11 +52,11 @@ class ActorCritic(nn.Module):
                 nn.ReLU()
             )
 
-        self.advantage_out = nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action)
-        torch.nn.init.kaiming_normal_(self.advantage_out.weight, nonlinearity="relu")
+        self.actor = nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action)
+        torch.nn.init.kaiming_normal_(self.actor.weight, nonlinearity="relu")
 
-        self.value_out = nn.Linear(hyperParams.HIDDEN_SIZE_2, 1)
-        torch.nn.init.kaiming_normal_(self.value_out.weight, nonlinearity="relu")
+        self.critic = nn.Linear(hyperParams.HIDDEN_SIZE_2, 1)
+        torch.nn.init.kaiming_normal_(self.critic.weight, nonlinearity="relu")
 
 
 
@@ -65,12 +65,12 @@ class ActorCritic(nn.Module):
         features = self.features(ob)
 
         if(self.cnn):
-            values = self.value_out(features[0])
-            advantages = self.advantage_out(features[1])
+            values = self.critic(features[0])
+            advantages = self.actor(features[1])
 
         else:
-            values = self.value_out(features)
-            advantages = self.advantage_out(features)
+            values = self.critic(features)
+            advantages = self.actor(features)
 
         if(self.ppo):
             return nn.functional.softmax(advantages, dim=-1), values
