@@ -95,7 +95,7 @@ if __name__ == '__main__':
         
         agent.tab_max_q = []
 
-    save(tab_sum_rewards, tab_mean_rewards, args.module.removeprefix("ALE/"), args, agent, hyperParams)
+    save(tab_sum_rewards, tab_mean_rewards, args.module.removeprefix("ALE/"), args, agent, hyperParams, max_mean_reward<tab_mean_rewards[-1])
 
     # Close the env (only useful for the gym envs for now)
     env.close()

@@ -4,7 +4,7 @@ class TD3HyperParams :
         self.HIDDEN_SIZE_1 = 256
         self.HIDDEN_SIZE_2 = 256
         
-        self.EPISODE_COUNT = 2000
+        self.TRAINING_FRAMES = 3e5
         self.POLICY_DELAY = 2
 
         self.BUFFER_SIZE = 5e5  # replay buffer size
@@ -64,9 +64,11 @@ class DQNHyperParams :
         self.LEARNING_START = 64
         self.LEARN_EVERY = 4
 
-        self.EPSILON = 1.0
-        self.MIN_EPSILON = 0.1
-        self.EPSILON_DECAY = self.EPSILON/(self.TRAINING_FRAMES*1/10)
+        self.START_EPSILON = 1.0
+        self.FIRST_MIN_EPSILON = 0.1
+        self.FIRST_EPSILON_DECAY = (self.START_EPSILON-self.FIRST_MIN_EPSILON)/(3e4-self.LEARNING_START)
+        self.MIN_EPSILON = 0.01
+        self.SECOND_EPSILON_DECAY = (self.FIRST_MIN_EPSILON-self.MIN_EPSILON)/3e4
 
 #CARTPOLE
 class PPOHyperParams : 

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 
 from python.NeuralNetworks import REINFORCE_Model
-from python.hyperParams import REINFORCEHyperParams, module
+from python.hyperParams import REINFORCEHyperParams
 
 
 def discount_rewards(rewards, gamma):
@@ -45,14 +45,14 @@ if __name__ == '__main__':
     hyperParams = REINFORCEHyperParams()
 
     if(args.test):
-        with open('./trained_networks/'+args.module+'_REINFORCE.hp', 'rb') as infile:
+        with open('./files/'+args.module+'_REINFORCE.hp', 'rb') as infile:
             hyperParams = pickle.load(infile)
             
 
 
     policy = REINFORCE_Model(env.observation_space.shape[0], env.action_space.n, hyperParams)
     if(args.test):
-        policy.load_state_dict(torch.load('./trained_networks/'+args.module+'_REINFORCE.n'))
+        policy.load_state_dict(torch.load('./files/'+args.module+'_REINFORCE.n'))
         policy.eval()
     
     # Set up lists to hold results
@@ -153,9 +153,9 @@ if __name__ == '__main__':
         plt.savefig("./images/"+args.module+"_REINFORCE.png")
         
         #save the neural networks of the policy
-        torch.save(policy.state_dict(), './trained_networks/'+args.module+'_REINFORCE.n')
+        torch.save(policy.state_dict(), './files/'+args.module+'_REINFORCE.n')
 
         #save the hyper parameters (for the tests and just in case)
-        with open('./trained_networks/'+args.module+'_REINFORCE.hp', 'wb') as outfile:
+        with open('./files/'+args.module+'_REINFORCE.hp', 'wb') as outfile:
             pickle.dump(hyperParams, outfile)
                 

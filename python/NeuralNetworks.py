@@ -29,12 +29,12 @@ class Actor(nn.Module):
 
 class ActorCritic(nn.Module):
 
-    def __init__(self, size_ob, size_action, hyperParams, cnn=False, ppo=False): #for saved hyperparameters
+    def __init__(self, size_ob, size_action, hyperParams, cnn=False, ppo=False, max_action=-1): #for saved hyperparameters
         super(ActorCritic, self).__init__()
 
         self.cnn = cnn
-
         self.ppo = ppo
+        self.max_action = max_action
 
         if(cnn):
             self.features = CNN_layers(size_ob, hyperParams)
@@ -58,6 +58,10 @@ class ActorCritic(nn.Module):
         self.critic = nn.Linear(hyperParams.HIDDEN_SIZE_2, 1)
         torch.nn.init.kaiming_normal_(self.critic.weight, nonlinearity="relu")
 
+        if(max_action>0):
+            self.stds = nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action)
+            torch.nn.init.kaiming_normal_(self.stds.weight, nonlinearity="relu")
+
 
 
     def forward(self, ob):
@@ -73,7 +77,11 @@ class ActorCritic(nn.Module):
             advantages = self.actor(features)
 
         if(self.ppo):
-            return nn.functional.softmax(advantages, dim=-1), values
+            if(self.max_action>0):
+                stds = self.stds(features)
+                return nn.functional.tanh(advantages)*self.max_action, nn.functional.sigmoid(stds), values
+            else:
+                return nn.functional.softmax(advantages, dim=-1), values
         else:
             return values + (advantages - advantages.mean())
 
@@ -196,61 +204,3 @@ class PPO_Critic(nn.Module):
     
     def forward(self, ob):
         return self.critic(ob.float())
-
-
-
-
-class Actor_CNN(nn.Module):
-    def __init__(self, size_ob, size_action, hyperParams, ppo=False):
-        super(Actor_CNN, self).__init__()
-
-        self.cnn = nn.Sequential(
-            nn.Conv2d(size_ob, 32, 8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, 4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, stride=1),
-            nn.ReLU())
-        
-        self.actor = nn.Sequential(
-            nn.Linear(3136, 512),
-            nn.ReLU(),
-            nn.Linear(512, size_action))
-
-        if(ppo):
-            self.actor.append(nn.Softmax(dim=-1))
-
-
-    
-    def forward(self, ob):
-        features = self.cnn(ob.float())
-        if(len(ob.shape)==4):
-            features = torch.flatten(features, start_dim=1)
-        else:
-            features = torch.flatten(features)
-        return self.actor(features)
-
-
-class Critic_CNN(nn.Module):
-    def __init__(self, size_ob, hyperParams):
-        super(Critic_CNN, self).__init__()
-        self.cnn = nn.Sequential(
-            nn.Conv2d(size_ob, 32, 8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, 4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, stride=1),
-            nn.ReLU())
-
-        self.critic=nn.Sequential(
-            nn.Linear(3136, 512),
-            nn.ReLU(),
-            nn.Linear(512, 1))
-    
-    def forward(self, ob):
-        features = self.cnn(ob.float())
-        if(len(ob.shape)==4):
-            features = torch.flatten(features, start_dim=1)
-        else:
-            features = torch.flatten(features)
-        return self.critic(features)
