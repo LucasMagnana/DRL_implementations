@@ -10,4 +10,4 @@ parser.add_argument("-s", "--speed", type=int, default=8)
 args = parser.parse_args()
 
 videoClip = VideoFileClip("rgb_array/rl-video-episode-0.mp4")
-videoClip.speedx(args.speed).write_gif("images/"+args.module.removeprefix("ALE/")+"_"+args.algorithm+".gif", loop=True, fps=60)
+videoClip.speedx(args.speed).write_gif("images/"+args.module.removeprefix("ALE/")+"_"+args.algorithm+".gif", fps=60)
