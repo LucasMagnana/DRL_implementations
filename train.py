@@ -17,25 +17,20 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--cuda", action="store_true")
     parser.add_argument("-a", "--algorithm", type=str, default="3DQN")
-    parser.add_argument("--no-save", action="store_true")
-    parser.add_argument("--render", action="store_true")
-    parser.add_argument("-m", "--module", type=str, default="LunarLanderContinuous-v2")
+    parser.add_argument("-m", "--module", type=str, default="CartPole-v1")
     #"LunarLanderContinuous-v2" #"Acrobot-v1" #"CartPole-v1" #"BipedalWalker-v3" 
 
     args = parser.parse_args()
 
     cuda=False
-    args.cuda = args.cuda and torch.cuda.is_available()
+    args.cuda = False #args.cuda and torch.cuda.is_available()
     print("cuda:", args.cuda)
     if(args.cuda):
         print(torch.cuda.get_device_name(0))
     
-
-    if(args.render):
-        env = gym.make(args.module, render_mode="human") #gym env
-    elif("ALE" in args.module):
+    
+    if("ALE" in args.module):
         env = gym.make(args.module, frameskip=4, obs_type="grayscale", repeat_action_probability=0)
         env = ResizeObservation(env, shape=84)
         env = FrameStack(env, num_stack=4)
@@ -52,7 +47,7 @@ if __name__ == '__main__':
     ep = 0
     max_mean_reward = None
     while(total_steps < hyperParams.TRAINING_FRAMES):
-        if(not args.no_save and ep > 0 and ep%100 == 0):
+        if(ep > 0 and ep%100 == 0):
             if(max_mean_reward == None or max_mean_reward < tab_mean_rewards[-1]):
                 max_mean_reward = tab_mean_rewards[-1]
             save(tab_sum_rewards, tab_mean_rewards, args.module.removeprefix("ALE/"), args, agent, hyperParams, max_mean_reward==tab_mean_rewards[-1])

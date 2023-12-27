@@ -107,8 +107,8 @@ class DQNAgent(object):
             tens_state = torch.tensor(np.stack([i[0] for i in spl]))
             tens_state_next = torch.tensor(np.stack([i[2] for i in spl]))
         else:
-            tens_state = torch.tensor([i[0] for i in spl])
-            tens_state_next = torch.tensor([i[2] for i in spl])
+            tens_state = torch.tensor(np.stack([i[0] for i in spl]))
+            tens_state_next = torch.tensor(np.stack([i[2] for i in spl]))
         tens_action = torch.tensor([i[1] for i in spl]).squeeze().long()
         tens_reward = torch.tensor([i[3] for i in spl]).squeeze().float()
         tens_done = torch.tensor([i[4] for i in spl]).squeeze().bool()
