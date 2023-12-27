@@ -11,17 +11,17 @@ This project contains the implementation of various deep reinforcement learning 
 
 Here are some [Gym](https://www.gymlibrary.dev/index.html) environments that have been solved (or nearly solved) using the implemented algorithms.
 ### Classic Control
-| <img src="https://github.com/LucasMagnana/DRL_implementations/images/Acrobot-v1_PPO.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/images/CartPole-v1_REINFORCE.gif?raw=true" width=300> | 
+| <img src="https://github.com/LucasMagnana/DRL_implementations/tree/main/images/Acrobot-v1_PPO.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/tree/main/images/CartPole-v1_REINFORCE.gif?raw=true" width=300> | 
 |:--:|:--:| 
 | *Acrobot-v1 with PPO* | *CartPole-v1 with REINFORCE* |
 
 ### Box2D with Continuous Action Space
-| <img src="https://github.com/LucasMagnana/DRL_implementations/images/LunarLanderContinuous-v2_TD3.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/images/BipedalWalker-v3_TD3.gif?raw=true" width=300> | 
+| <img src="https://github.com/LucasMagnana/DRL_implementations/tree/main/images/LunarLanderContinuous-v2_TD3.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/tree/main/images/BipedalWalker-v3_TD3.gif?raw=true" width=300> | 
 |:--:|:--:| 
 | *LunarLanderContinuous-v2 with TD3* | *BipedalWalker-v3 with TD3* |
 
 ### Atari (using pixels)
-| <img src="https://github.com/LucasMagnana/DRL_implementations/images/Pong-v5_3DQN.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/images/Breakout-v5_3DQN.gif?raw=true" width=300> | 
+| <img src="https://github.com/LucasMagnana/DRL_implementations/tree/main/images/Pong-v5_3DQN.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/tree/main/images/Breakout-v5_3DQN.gif?raw=true" width=300> | 
 |:--:|:--:| 
 | *ALE/Pong-v5 with 3DQN* | *ALE/Breakout-v5 with 3DQN* |
 
