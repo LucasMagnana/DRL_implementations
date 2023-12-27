@@ -48,8 +48,6 @@ The files that can be executed are `train.py`, `test.py` and `mp4_to_gif.py`. `t
 > [!WARNING]
 > PPO only works with classic control environments with discrete action space for now.
 
-## References
-
 [^1]: Sutton, Richard S., et al. "Policy gradient methods for reinforcement learning with function approximation." *Advances in neural information processing systems* 12 (1999).
 [^2]: Mnih, Volodymyr, et al. "Human-level control through deep reinforcement learning." *nature* 518.7540 (2015): 529-533.
 [^3]: Van Hasselt, Hado, Arthur Guez, and David Silver. "Deep reinforcement learning with double q-learning." *Proceedings of the AAAI conference on artificial intelligence.* Vol. 30. No. 1. 2016.
