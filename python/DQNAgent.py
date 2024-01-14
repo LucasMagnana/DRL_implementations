@@ -1,6 +1,5 @@
 
 import random
-from random import sample, random, randint
 
 from torch.nn import MSELoss, HuberLoss
 from collections import deque
@@ -82,12 +81,12 @@ class DQNAgent(object):
         observation = torch.tensor(np.expand_dims(observation, axis=0), device=self.device)
         tens_qvalue = self.actor(observation) #compute the qvalues for the observation
         tens_qvalue = tens_qvalue.squeeze()
-        rand = random()
+        rand = random.random()
         if(rand > self.epsilon): #noise management
             _, indices = tens_qvalue.max(0) #finds the index of the max qvalue
             action = indices.item() #return it
         else:
-            action = randint(0, tens_qvalue.size()[0]-1) #choose a random action
+            action = random.randint(0, tens_qvalue.size()[0]-1) #choose a random action
 
         return action, None
 
@@ -101,7 +100,7 @@ class DQNAgent(object):
     def learn(self, n_iter=None):
 
 
-        spl = sample(self.buffer, min(len(self.buffer), self.hyperParams.BATCH_SIZE))
+        spl = random.sample(self.buffer, min(len(self.buffer), self.hyperParams.BATCH_SIZE))
         
         if(self.cnn):
             tens_state = torch.tensor(np.stack([i[0] for i in spl]))

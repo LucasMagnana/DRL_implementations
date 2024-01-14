@@ -5,7 +5,7 @@ from python.hyperParams import *
 
 import pickle
 
-def load_agent_and_hp(args, env, continuous_action_space, actor_to_load=None):
+def load_hp(args):
     if("ALE" in args.module):
         cnn = True
     else:
@@ -13,25 +13,46 @@ def load_agent_and_hp(args, env, continuous_action_space, actor_to_load=None):
 
     if(args.algorithm == "DQN"):
             hyperParams = DQNHyperParams()
-            agent = DQNAgent(env.observation_space, env.action_space, hyperParams, actor_to_load=actor_to_load, cnn=cnn)
     elif(args.algorithm == "3DQN"):
         if(cnn):
             hyperParams = DQNCNNHyperParams()
         else:
             hyperParams = DQNHyperParams()
-        agent = DQNAgent(env.observation_space, env.action_space, hyperParams, double=True, duelling=True, actor_to_load=actor_to_load, cnn=cnn)
     elif(args.algorithm == "TD3"):
         hyperParams = TD3HyperParams()
-        agent = TD3Agent(env.observation_space, env.action_space, hyperParams, cuda=args.cuda, actor_to_load=actor_to_load)
     elif(args.algorithm == "PPO"):
         if(cnn):
             hyperParams = PPOCNNHyperParams()
         else:
             hyperParams = PPOHyperParams()
-        agent = PPOAgent(env.observation_space, env.action_space, hyperParams, continuous_action_space=continuous_action_space,\
+
+    return hyperParams
+
+def load_agent(args, env, continuous_action_space, hyperParams, actor_to_load=None):
+    if("ALE" in args.module):
+        cnn = True
+    else:
+        cnn = False
+
+    if(actor_to_load == None and hyperParams.NUM_ENV > 1):
+        ob_space = env.single_observation_space
+        ac_space = env.single_action_space
+    else:
+        ob_space = env.observation_space
+        ac_space = env.action_space
+    
+
+    if(args.algorithm == "DQN"):
+            agent = DQNAgent(ob_space, ac_space, hyperParams, actor_to_load=actor_to_load, cnn=cnn)
+    elif(args.algorithm == "3DQN"):
+        agent = DQNAgent(ob_space, ac_space, hyperParams, double=True, duelling=True, actor_to_load=actor_to_load, cnn=cnn)
+    elif(args.algorithm == "TD3"):
+        agent = TD3Agent(ob_space, ac_space, hyperParams, cuda=args.cuda, actor_to_load=actor_to_load)
+    elif(args.algorithm == "PPO"):
+        agent = PPOAgent(ob_space, ac_space, hyperParams, continuous_action_space=continuous_action_space,\
                 actor_to_load=actor_to_load, cnn=cnn)
 
-    return hyperParams, agent
+    return agent
 
 
 def save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams, save_nn=False):
@@ -45,6 +66,23 @@ def save(tab_sum_rewards, tab_mean_rewards, module, args, agent, hyperParams, sa
     plt.xlabel('Episodes')   
     plt.ylabel('Sum of rewards')       
     plt.savefig("./images/"+module+"_"+args.algorithm+".png")
+
+    plt.clf()
+    plt.plot(agent.v_loss)
+    plt.savefig("./value_loss.png")
+
+    plt.clf()
+    plt.plot(agent.e_loss)
+    plt.savefig("./entropy_loss.png")
+
+    plt.clf()
+    plt.plot(agent.p_loss)
+    plt.savefig("./policy_loss.png")
+
+    plt.clf()
+    plt.plot(agent.lr)
+    plt.savefig("./lr.png")
+
     
     if(save_nn):
         #save the neural networks of the agent

@@ -74,26 +74,26 @@ class DQNHyperParams :
 class PPOHyperParams : 
     def __init__(self):
         self.GAMMA = 0.99
-        self.LR = 1e-4
-        self.BATCH_SIZE = 256
+        self.LR = 2.5e-4
 
-        self.HIDDEN_SIZE_1 = 256
-        self.HIDDEN_SIZE_2 = 256
+        self.HIDDEN_SIZE_1 = 64
+        self.HIDDEN_SIZE_2 = 64
 
         self.TRAINING_FRAMES = 5e5
-        self.MAX_STEPS = 1000
+        self.MAX_STEPS = 500
 
-        self.LAMBDA = 0.99
-        self.EPSILON = 0.1
+        self.LAMBDA = 0.95
+        self.EPSILON = 0.2
 
         self.K = 4
-        self.MAXLEN = 1000
+        self.NUM_ENV = 4
+        self.BATCH_SIZE = 512//self.NUM_ENV
+        self.NUM_MINIBATCHES = 4
 
         self.ENTROPY_COEFF = 0.01
         self.VALUES_COEFF = 0.5
         self.MAX_GRAD = 0.5
         self.GAMMA_GAE = 0.95
-        self.LR_DECAY = self.LR/(self.TRAINING_FRAMES/self.MAXLEN)
 
 
 

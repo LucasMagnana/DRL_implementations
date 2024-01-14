@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.autograd import Variable
 from math import *
+import numpy as np
 
 
 
@@ -26,6 +27,14 @@ class Actor(nn.Module):
             return self.out(out)*self.max_action
 
 
+def layer_init(layer, ppo, std=np.sqrt(2), bias_const=0.0):
+    if(ppo):
+        torch.nn.init.orthogonal_(layer.weight, std)
+        torch.nn.init.constant_(layer.bias, bias_const)
+    else:
+        torch.nn.init.kaiming_normal_(layer.weight, nonlinearity="relu")
+    return layer
+
 
 class ActorCritic(nn.Module):
 
@@ -37,26 +46,22 @@ class ActorCritic(nn.Module):
         self.max_action = max_action
 
         if(cnn):
-            self.features = CNN_layers(size_ob, hyperParams)
+            self.network = CNN_layers(size_ob, hyperParams)
         else:
-            l1 = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE_1)
-            torch.nn.init.kaiming_normal_(l1.weight, nonlinearity="relu")
+            l1 = layer_init(nn.Linear(np.array(size_ob).prod(), 64), ppo)
 
-            l2 = nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2)
-            torch.nn.init.kaiming_normal_(l2.weight, nonlinearity="relu")
+            l2 = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2), ppo)
 
-            self.features = nn.Sequential(
+            self.network = nn.Sequential(
                 l1,
-                nn.ReLU(),
+                nn.Tanh(),
                 l2,
-                nn.ReLU()
+                nn.Tanh()
             )
 
-        self.actor = nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action)
-        torch.nn.init.kaiming_normal_(self.actor.weight, nonlinearity="relu")
+        self.actor = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action), ppo, std=0.01, bias_const=1.0)
 
-        self.critic = nn.Linear(hyperParams.HIDDEN_SIZE_2, 1)
-        torch.nn.init.kaiming_normal_(self.critic.weight, nonlinearity="relu")
+        self.critic = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_2, 1), ppo, std=1)
 
         if(max_action>0):
             self.stds = nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action)
@@ -65,23 +70,22 @@ class ActorCritic(nn.Module):
 
 
     def forward(self, ob):
-        ob = ob.float()
-        features = self.features(ob)
+        features = self.network(ob)
 
         if(self.cnn):
             values = self.critic(features[0])
             advantages = self.actor(features[1])
 
         else:
-            values = self.critic(features)
             advantages = self.actor(features)
+            values = self.critic(features)
 
         if(self.ppo):
             if(self.max_action>0):
                 stds = self.stds(features)
                 return nn.functional.tanh(advantages)*self.max_action, nn.functional.sigmoid(stds), values
             else:
-                return nn.functional.softmax(advantages, dim=-1), values
+                return advantages, values
         else:
             return values + (advantages - advantages.mean())
 

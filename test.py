@@ -21,7 +21,7 @@ if __name__ == '__main__':
     parser.add_argument("--cuda", action="store_true")
 
     parser.add_argument("-a", "--algorithm", type=str, default="PPO")
-    parser.add_argument("-m", "--module", type=str, default="LunarLanderContinuous-v2")
+    parser.add_argument("-m", "--module", type=str, default="CartPole-v1")
     parser.add_argument("--save", action="store_true")
 
     args = parser.parse_args()
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
     print(hyperParams.__dict__)
 
-    hyperParams, agent = load_agent_and_hp(args, env, isinstance(env.action_space, gym.spaces.box.Box), actor_to_load=actor_to_load)
+    agent = load_agent(args, env, isinstance(env.action_space, gym.spaces.box.Box), hyperParams, actor_to_load=actor_to_load)
 
     
     tab_sum_rewards = []
