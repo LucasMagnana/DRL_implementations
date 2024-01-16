@@ -6,6 +6,9 @@ import numpy as np
 from random import randint
 
 from gym.wrappers import RecordVideo, FrameStack, ResizeObservation
+import stable_baselines3.common.atari_wrappers as atari_wrappers
+
+
 import matplotlib.pyplot as plt
 
 import datetime as dt
@@ -38,9 +41,14 @@ if __name__ == '__main__':
 
 
     if("ALE" in args.module):
-        env = gym.make(args.module, frameskip=4, obs_type="grayscale", repeat_action_probability=0, render_mode=render_mode)
-        env = ResizeObservation(env, shape=84)
-        env = FrameStack(env, num_stack=4)
+        env = gym.make(args.module, frameskip=1, repeat_action_probability=0, render_mode=render_mode)
+        env = gym.wrappers.RecordEpisodeStatistics(env)
+        env = atari_wrappers.FireResetEnv(env)
+        env = atari_wrappers.NoopResetEnv(env, noop_max=30)
+        env = atari_wrappers.MaxAndSkipEnv(env, skip=4)
+        env = gym.wrappers.ResizeObservation(env, (84, 84))
+        env = gym.wrappers.GrayScaleObservation(env)
+        env = gym.wrappers.FrameStack(env, 4)
     else:
         env = gym.make(args.module, render_mode=render_mode) #gym env
 
@@ -62,23 +70,15 @@ if __name__ == '__main__':
 
     for e in range(1):
         ob = env.reset()[0]
-        if("ALE" in args.module):
-            for _ in range(randint(1, 30)):
-                ob, reward, done, _, info = env.step(0)
-            ob = np.array(ob).squeeze()
         sum_rewards=0
         steps=0
-        while True:
-            ob_prec = ob   
+        done = False
+        while not done:
+            ob = np.expand_dims(ob, 0)
             action, infos = agent.act(ob)
-            ob, reward, done, _, _ = env.step(action)
-            if("ALE" in args.module):
-                ob = np.array(ob).squeeze()
+            ob, reward, done, _, infos = env.step(action.squeeze().numpy())
             sum_rewards += reward
             steps+=1
-            if done or steps > hyperParams.MAX_STEPS:
-                tab_sum_rewards.append(sum_rewards)            
-                break
 
 
     env.close()
