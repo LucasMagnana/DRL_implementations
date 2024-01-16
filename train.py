@@ -19,11 +19,12 @@ def make_env(module, seed):
         if("ALE" in module):
             env = gym.make(module, frameskip=1, repeat_action_probability=0)
             env = gym.wrappers.RecordEpisodeStatistics(env)
-            env = atari_wrappers.FireResetEnv(env)
-            env = atari_wrappers.EpisodicLifeEnv(env)
-            env = atari_wrappers.ClipRewardEnv(env)
             env = atari_wrappers.NoopResetEnv(env, noop_max=30)
             env = atari_wrappers.MaxAndSkipEnv(env, skip=4)
+            env = atari_wrappers.EpisodicLifeEnv(env)
+            if "FIRE" in env.unwrapped.get_action_meanings():
+                env = atari_wrappers.FireResetEnv(env)
+            env = atari_wrappers.ClipRewardEnv(env)
             env = gym.wrappers.ResizeObservation(env, (84, 84))
             env = gym.wrappers.GrayScaleObservation(env)
             env = gym.wrappers.FrameStack(env, 4)
@@ -98,7 +99,11 @@ if __name__ == '__main__':
         agent_infos.append(env_num)
         agent_infos.append((total_steps//hyperParams.NUM_ENV)%hyperParams.BATCH_SIZE)
         ob, reward, done, _, infos = env.step(action.numpy())
-        agent.memorize(ob_prec, action, ob, np.clip(reward, -1, 1), done, agent_infos)
+        if(args.algorithm == "PPO"):
+            save_done = last_done
+        else:
+            save_done = done
+        agent.memorize(ob_prec, action, ob, reward, save_done, agent_infos)
         last_done = done
         sum_rewards[env_num] += reward
         if(args.algorithm != "PPO" and steps[env_num]%hyperParams.LEARN_EVERY == 0 and agent.num_transition_stored%hyperParams.BUFFER_SIZE > hyperParams.LEARNING_START):
