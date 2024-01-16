@@ -55,21 +55,21 @@ def gae(rewards, values, dones, num_steps, nextdones, nextob, actor, gamma, gae_
 
 class PPOAgent():
 
-    def __init__(self, obatch_space, ac_space, hyperParams, actor_to_load=None, continuous_action_space=False, cnn=False):
+    def __init__(self, ob_space, ac_space, hyperParams, actor_to_load=None, continuous_action_space=False, cnn=False):
 
         self.hyperParams = hyperParams
 
         self.continuous_action_space = continuous_action_space
 
         self.ac_space = ac_space
-        self.obatch_space = obatch_space
+        self.ob_space = ob_space
 
         device = torch.device("cpu")
 
         if(self.continuous_action_space):
-            self.actor = PPO_Actor(obatch_space.shape[0], ac_space.shape[0], hyperParams, max_action=ac_space.high[0])
+            self.actor = PPO_Actor(ob_space.shape[0], ac_space.shape[0], hyperParams, max_action=ac_space.high[0])
         else:  
-            self.actor = ActorCritic(obatch_space.shape, ac_space.n, self.hyperParams, cnn=cnn, ppo=True).to(device)
+            self.actor = ActorCritic(ob_space.shape, ac_space.n, self.hyperParams, cnn=cnn, ppo=True).to(device)
 
         if(actor_to_load != None):
             self.actor.load_state_dict(torch.load(actor_to_load))
@@ -92,17 +92,13 @@ class PPOAgent():
         self.v_loss = []
         self.lr = []
 
-        self.reset_batches()
 
-
-    def reset_batches(self):
         self.batch_rewards = torch.zeros((self.hyperParams.BATCH_SIZE, self.hyperParams.NUM_ENV))
-        self.batch_states = torch.zeros((self.hyperParams.BATCH_SIZE, self.hyperParams.NUM_ENV) + self.obatch_space.shape)
+        self.batch_states = torch.zeros((self.hyperParams.BATCH_SIZE, self.hyperParams.NUM_ENV) + self.ob_space.shape)
         self.batch_values = torch.zeros((self.hyperParams.BATCH_SIZE, self.hyperParams.NUM_ENV))
         self.batch_actions = torch.zeros((self.hyperParams.BATCH_SIZE, self.hyperParams.NUM_ENV) + self.ac_space.shape)
         self.batch_log_probs = torch.zeros((self.hyperParams.BATCH_SIZE, self.hyperParams.NUM_ENV))
         self.batch_dones = torch.zeros((self.hyperParams.BATCH_SIZE, self.hyperParams.NUM_ENV))
-        self.batch_advantages = torch.zeros((self.hyperParams.BATCH_SIZE, self.hyperParams.NUM_ENV))
     
 
 
@@ -117,6 +113,8 @@ class PPOAgent():
         self.batch_rewards[step] = torch.tensor(reward).view(-1)
         self.batch_actions[step] = action
         self.batch_log_probs[step] = action_probs
+        if(self.hyperParams.NUM_ENV == 1):
+            done = [done]
         self.batch_dones[step] = torch.Tensor(done)
 
 
@@ -142,7 +140,7 @@ class PPOAgent():
         gaes = gae(self.batch_rewards, self.batch_values, self.batch_dones, self.hyperParams.BATCH_SIZE, next_dones, next_obs, self.actor, self.hyperParams.GAMMA, self.hyperParams.LAMBDA)
         returns = gaes + self.batch_values
         # flatten the batch
-        batch_states = self.batch_states.reshape((-1,) + self.obatch_space.shape)
+        batch_states = self.batch_states.reshape((-1,) + self.ob_space.shape)
         batch_logprobs = self.batch_log_probs.reshape(-1)
         batch_actions = self.batch_actions.reshape((-1,) + self.ac_space.shape)
         batch_advantages = gaes.reshape(-1)
@@ -208,7 +206,7 @@ class PPOAgent():
         gaes = gae(self.batch_rewards, self.batch_values, self.batch_dones, self.hyperParams.BATCH_SIZE, next_dones, next_obs, self.actor, self.hyperParams.GAMMA, self.hyperParams.LAMBDA)
         returns = gaes + self.batch_values
                 
-        batch_states = self.batch_states.reshape((-1,)+self.obatch_space.shape)
+        batch_states = self.batch_states.reshape((-1,)+self.ob_space.shape)
         batch_log_probs = self.batch_log_probs.reshape(-1)
         batch_actions = self.batch_actions.reshape((-1,)+self.ac_space.shape)
         batch_advantages = gaes.reshape(-1)

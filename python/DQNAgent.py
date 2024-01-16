@@ -13,13 +13,11 @@ import torch
 from python.NeuralNetworks import *
 
 class DQNAgent(object):
-    def __init__(self, observation_space, action_space, hyperParams, test=False, double=True, duelling=True, PER=False, cuda=False, actor_to_load=None, cnn=False):
+    def __init__(self, ob_space, ac_space, hyperParams, test=False, double=True, duelling=True, PER=False, cuda=False, actor_to_load=None, cnn=False):
 
         self.hyperParams = hyperParams
 
-        self.action_space = action_space 
-
-        self.buffer = deque()
+        self.ac_space = ac_space 
 
         self.epsilon = self.hyperParams.START_EPSILON
         self.epsilon_decay_value = self.hyperParams.FIRST_EPSILON_DECAY
@@ -32,10 +30,9 @@ class DQNAgent(object):
         self.duelling = duelling
         self.cnn = cnn
         if(self.duelling):
-            self.actor = ActorCritic(observation_space.shape[0], action_space.n, self.hyperParams, cnn=cnn).to(self.device) 
+            self.actor = ActorCritic(ob_space.shape[0], ac_space.n, self.hyperParams, cnn=cnn).to(self.device) 
         else:
-            self.actor = Actor(observation_space.shape[0], action_space.n, self.hyperParams, cnn=cnn).to(self.device) #for cartpole
-        self.batch_size = self.hyperParams.BATCH_SIZE
+            self.actor = Actor(ob_space.shape[0], ac_space.n, self.hyperParams, cnn=cnn).to(self.device) #for cartpole
 
 
         if(actor_to_load != None): #if it's a test, use the loaded NN
@@ -48,7 +45,7 @@ class DQNAgent(object):
 
         self.optimizer = torch.optim.Adam(self.actor.parameters(), self.hyperParams.LR) # smooth gradient descent
 
-        self.observation_space = observation_space
+        self.ob_space = ob_space
 
         self.double = double
 
@@ -56,6 +53,16 @@ class DQNAgent(object):
 
         self.tab_max_q = []
         self.tab_loss = []
+
+        self.batch_prec_states = torch.zeros((self.hyperParams.BUFFER_SIZE,) + self.ob_space.shape)
+        self.batch_actions = torch.zeros((self.hyperParams.BUFFER_SIZE,) + self.ac_space.shape)
+        self.batch_states = torch.zeros((self.hyperParams.BUFFER_SIZE,) + self.ob_space.shape)
+        self.batch_rewards = torch.zeros(self.hyperParams.BUFFER_SIZE)
+        self.batch_dones = torch.zeros(self.hyperParams.BUFFER_SIZE)
+
+        self.b_inds = np.arange(self.hyperParams.BUFFER_SIZE)
+
+        self.num_transition_stored = 0
 
         self.loss = HuberLoss()
 
@@ -74,7 +81,7 @@ class DQNAgent(object):
 
 
     def act(self, observation):
-        if(not self.test and len(self.buffer) >= self.hyperParams.LEARNING_START):
+        if(not self.test and self.num_transition_stored >= self.hyperParams.LEARNING_START):
             self.epsilon_decay()
         self.update_target += 1  
 
@@ -84,33 +91,34 @@ class DQNAgent(object):
         rand = random.random()
         if(rand > self.epsilon): #noise management
             _, indices = tens_qvalue.max(0) #finds the index of the max qvalue
-            action = indices.item() #return it
+            action = indices #return it
         else:
-            action = random.randint(0, tens_qvalue.size()[0]-1) #choose a random action
+            action = torch.tensor(random.randint(0, tens_qvalue.size()[0]-1)) #choose a random action
 
-        return action, None
+        return action, []
 
 
     def memorize(self, ob_prec, action, ob, reward, done, infos):
-        self.buffer.append([ob_prec, action, ob, reward, not(done)]) 
-        if(len(self.buffer)>self.hyperParams.BUFFER_SIZE):
-            self.buffer.popleft()  
+        self.batch_prec_states[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = torch.Tensor(ob_prec)
+        self.batch_actions[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = action
+        self.batch_states[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = torch.Tensor(ob)
+        self.batch_rewards[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = torch.tensor(reward).view(-1)
+        self.batch_dones[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = not(done)
+
+        self.num_transition_stored += 1
   
 
     def learn(self, n_iter=None):
 
 
-        spl = random.sample(self.buffer, min(len(self.buffer), self.hyperParams.BATCH_SIZE))
+        m_batch_inds = np.random.choice(self.b_inds[:min(self.num_transition_stored, self.hyperParams.BUFFER_SIZE)],\
+        size=self.hyperParams.BATCH_SIZE, replace=False)
         
-        if(self.cnn):
-            tens_state = torch.tensor(np.stack([i[0] for i in spl]))
-            tens_state_next = torch.tensor(np.stack([i[2] for i in spl]))
-        else:
-            tens_state = torch.tensor(np.stack([i[0] for i in spl]))
-            tens_state_next = torch.tensor(np.stack([i[2] for i in spl]))
-        tens_action = torch.tensor([i[1] for i in spl]).squeeze().long()
-        tens_reward = torch.tensor([i[3] for i in spl]).squeeze().float()
-        tens_done = torch.tensor([i[4] for i in spl]).squeeze().bool()
+        tens_state = self.batch_prec_states[m_batch_inds]
+        tens_state_next = self.batch_states[m_batch_inds]
+        tens_action = self.batch_actions[m_batch_inds].long()
+        tens_reward = self.batch_rewards[m_batch_inds].float()
+        tens_done = self.batch_dones[m_batch_inds].bool()
 
         tens_qvalue = self.actor(tens_state) #compute the qvalues for all the actual states
 

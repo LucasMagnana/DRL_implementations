@@ -46,20 +46,25 @@ class ActorCritic(nn.Module):
         self.max_action = max_action
 
         if(cnn):
-            self.network = CNN_layers(size_ob, hyperParams)
+            self.network = CNN_layers(size_ob, hyperParams, ppo)
         else:
             l1 = layer_init(nn.Linear(np.array(size_ob).prod(), 64), ppo)
 
             l2 = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2), ppo)
 
+            if(ppo):
+                activation = nn.Tanh()
+            else:
+                activation = nn.ReLU()
+
             self.network = nn.Sequential(
                 l1,
-                nn.Tanh(),
+                activation,
                 l2,
-                nn.Tanh()
+                activation
             )
 
-        self.actor = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action), ppo, std=0.01, bias_const=1.0)
+        self.actor = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action), ppo, std=0.01)
 
         self.critic = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_2, 1), ppo, std=1)
 
@@ -93,37 +98,25 @@ class ActorCritic(nn.Module):
 
 class CNN_layers(nn.Module):
 
-    def __init__(self, size_ob, hyperParams): #for saved hyperparameters
+    def __init__(self, size_ob, hyperParams, ppo): #for saved hyperparameters
         super(CNN_layers, self).__init__()
-
-        c1 = nn.Conv2d(size_ob, 32, 8, stride=4)
-        torch.nn.init.kaiming_normal_(c1.weight, nonlinearity="relu")
-
-        c2 = nn.Conv2d(32, 64, 4, stride=2)
-        torch.nn.init.kaiming_normal_(c2.weight, nonlinearity="relu")
-
-        c3 = nn.Conv2d(64, 64, 3, stride=1)
-        torch.nn.init.kaiming_normal_(c3.weight, nonlinearity="relu")
-
-        l1 = nn.Linear(3136, hyperParams.HIDDEN_SIZE_2*2)
-        torch.nn.init.kaiming_normal_(l1.weight, nonlinearity="relu")
 
         self.hidden_size = hyperParams.HIDDEN_SIZE_2
 
         self.cnn = nn.Sequential(
-            c1,
+            layer_init(nn.Conv2d(4, 32, 8, stride=4), ppo),
             nn.ReLU(),
-            c2,
+            layer_init(nn.Conv2d(32, 64, 4, stride=2), ppo),
             nn.ReLU(),
-            c3,
+            layer_init(nn.Conv2d(64, 64, 3, stride=1), ppo),
             nn.ReLU(),
             nn.Flatten(start_dim=1),
-            l1,
+            layer_init(nn.Linear(3136, hyperParams.HIDDEN_SIZE_2*2), ppo),
             nn.ReLU())
 
 
     def forward(self, ob):
-        features = self.cnn(ob.float()/255)
+        features = self.cnn(ob.float()/255.0)
         return torch.split(features, self.hidden_size, dim=1)
 
 
