@@ -11,9 +11,9 @@ This project contains the implementation of various deep reinforcement learning 
 
 Here are some [Gym](https://www.gymlibrary.dev/index.html) environments that have been solved (or nearly solved) using the implemented algorithms.
 ### Classic Control
-| <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/Acrobot-v1_PPO.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/CartPole-v1_REINFORCE.gif?raw=true" width=300> | 
+| <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/Acrobot-v1_3DQN.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/CartPole-v1_REINFORCE.gif?raw=true" width=300> | 
 |:--:|:--:| 
-| *Acrobot-v1 with PPO* | *CartPole-v1 with REINFORCE* |
+| *Acrobot-v1 with 3DQN* | *CartPole-v1 with REINFORCE* |
 
 ### Box2D with Continuous Action Space
 | <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/LunarLanderContinuous-v2_TD3.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/BipedalWalker-v3_TD3.gif?raw=true" width=300> | 
@@ -24,6 +24,9 @@ Here are some [Gym](https://www.gymlibrary.dev/index.html) environments that hav
 | <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/Pong-v5_3DQN.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/Breakout-v5_3DQN.gif?raw=true" width=300> | 
 |:--:|:--:| 
 | *ALE/Pong-v5 with 3DQN* | *ALE/Breakout-v5 with 3DQN* |
+| <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/BeamRider-v5_PPO.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/SpaceInvaders-v5_PPO.gif?raw=true" width=300> | 
+|:--:|:--:| 
+| *ALE/BeamRider-v5 with PPO* | *ALE/SpaceInvaders-v5 with PPO* |
 
 
 
@@ -46,7 +49,7 @@ The files that can be executed are `train.py`, `test.py` and `mp4_to_gif.py`. `t
 `test.py` displays an episode of a specified environment using an agent previously trained with a specified algorithm. `-a` and `-m` can be used with the same purposes as for `train.py`. If the `--save` parameter is used, the episode is not displayed but saved in the `rgb_array/` directory instead. `mp4_to_gif.py` can then be used to convert the video in a gif file and to save it in the `images/` directory. The `-a` and `-m` parameters are used by `mp4_to_gif.py` to name the GIF file.
 
 > [!WARNING]
-> PPO only works with classic control environments with discrete action space for now.
+> PPO only works with discrete action spaces for now.
 
 [^1]: Sutton, Richard S., et al. "Policy gradient methods for reinforcement learning with function approximation." *Advances in neural information processing systems* 12 (1999).
 [^2]: Mnih, Volodymyr, et al. "Human-level control through deep reinforcement learning." *nature* 518.7540 (2015): 529-533.

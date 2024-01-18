@@ -7,7 +7,7 @@ class TD3HyperParams :
         self.TRAINING_FRAMES = 3e5
         self.POLICY_DELAY = 2
 
-        self.BUFFER_SIZE = int(5e5)  # replay buffer size
+        self.BUFFER_SIZE = 5e5  # replay buffer size
         self.BATCH_SIZE = 128      # minibatch size
         self.GAMMA = 0.99            # discount factor
         self.TAU = 5e-3           # for soft update of target parameters
@@ -27,7 +27,7 @@ class TD3HyperParams :
 
 class DQNCNNHyperParams :
     def __init__(self):
-        self.BUFFER_SIZE = int(1e6)
+        self.BUFFER_SIZE = 1e6
         self.TARGET_UPDATE = 1e4
         self.GAMMA = 0.99
         self.LR = 1e-5
@@ -50,7 +50,7 @@ class DQNCNNHyperParams :
 #CARTPOLE
 class DQNHyperParams : 
     def __init__(self):
-        self.BUFFER_SIZE = int(1e5)
+        self.BUFFER_SIZE = 1e5
         self.TARGET_UPDATE = 1e3
         self.GAMMA = 0.99
         self.LR = 2.5e-4
@@ -59,7 +59,7 @@ class DQNHyperParams :
         self.HIDDEN_SIZE_1 = 64
         self.HIDDEN_SIZE_2 = 64
 
-        self.TRAINING_FRAMES = 1e5
+        self.TRAINING_FRAMES = 5e5
         self.LEARNING_START = 64
         self.LEARN_EVERY = 4
 

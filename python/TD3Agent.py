@@ -18,7 +18,6 @@ class TD3Agent(object):
 
         self.hyperParams = hyperParams
 
-        self.buffer_size = self.hyperParams.BUFFER_SIZE
         self.alpha = self.hyperParams.TAU
         self.gamma = self.hyperParams.GAMMA
         self.exploration_noise = self.hyperParams.EXPLORATION_NOISE
@@ -50,13 +49,15 @@ class TD3Agent(object):
         self.actor_target = copy.deepcopy(self.actor).to(device=self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), self.hyperParams.LR_ACTOR)
 
-        self.batch_prec_states = torch.zeros((self.hyperParams.BUFFER_SIZE,) + ob_space.shape)
-        self.batch_actions = torch.zeros((self.hyperParams.BUFFER_SIZE,) + self.ac_space.shape)
-        self.batch_states = torch.zeros((self.hyperParams.BUFFER_SIZE,) + ob_space.shape)
-        self.batch_rewards = torch.zeros(self.hyperParams.BUFFER_SIZE)
-        self.batch_dones = torch.zeros(self.hyperParams.BUFFER_SIZE)
+        self.buffer_size = int(self.hyperParams.BUFFER_SIZE)
 
-        self.b_inds = np.arange(self.hyperParams.BUFFER_SIZE)
+        self.batch_prec_states = torch.zeros((self.buffer_size,) + ob_space.shape)
+        self.batch_actions = torch.zeros((self.buffer_size,) + self.ac_space.shape)
+        self.batch_states = torch.zeros((self.buffer_size,) + ob_space.shape)
+        self.batch_rewards = torch.zeros(self.buffer_size)
+        self.batch_dones = torch.zeros(self.buffer_size)
+
+        self.b_inds = np.arange(self.buffer_size)
 
         self.num_transition_stored = 0
         
@@ -71,11 +72,11 @@ class TD3Agent(object):
         
 
     def memorize(self, ob_prec, action, ob, reward, done, infos):
-        self.batch_prec_states[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = torch.Tensor(ob_prec)
-        self.batch_actions[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = action
-        self.batch_states[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = torch.Tensor(ob)
-        self.batch_rewards[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = torch.tensor(reward).view(-1)
-        self.batch_dones[self.num_transition_stored%self.hyperParams.BUFFER_SIZE] = not(done)
+        self.batch_prec_states[self.num_transition_stored%self.buffer_size] = torch.Tensor(ob_prec)
+        self.batch_actions[self.num_transition_stored%self.buffer_size] = action
+        self.batch_states[self.num_transition_stored%self.buffer_size] = torch.Tensor(ob)
+        self.batch_rewards[self.num_transition_stored%self.buffer_size] = torch.tensor(reward).view(-1)
+        self.batch_dones[self.num_transition_stored%self.buffer_size] = not(done)
 
         self.num_transition_stored += 1
 
@@ -86,7 +87,7 @@ class TD3Agent(object):
         
         for i in range(5):
             
-            m_batch_inds = np.random.choice(self.b_inds[:min(self.num_transition_stored, self.hyperParams.BUFFER_SIZE)],\
+            m_batch_inds = np.random.choice(self.b_inds[:min(self.num_transition_stored, self.buffer_size)],\
             size=self.hyperParams.BATCH_SIZE, replace=False)
             
             tens_state = self.batch_prec_states[m_batch_inds]
