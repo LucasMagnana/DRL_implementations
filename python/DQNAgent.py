@@ -12,15 +12,6 @@ import torch
 
 from python.NeuralNetworks import *
 
-def rename_attribute(obj, old_name, new_name):
-    n_obj = OrderedDict()
-    for key in obj:
-        n_key = key.replace(old_name, new_name)
-        n_obj[n_key] = obj[key]
-    for key in n_obj:
-        print(key)
-    return n_obj
-
 class DQNAgent(object):
     def __init__(self, ob_space, ac_space, hyperParams, test=False, double=True, duelling=True, PER=False, cuda=False, actor_to_load=None, cnn=False):
 
@@ -45,15 +36,12 @@ class DQNAgent(object):
 
 
         if(actor_to_load != None): #if it's a test, use the loaded NN
-            self.epsilon = 0
+            self.epsilon = 0.01
             actor = torch.load(actor_to_load, map_location=self.device)
-            actor = rename_attribute(actor, 'features', 'network')
             self.actor.load_state_dict(actor)
             self.actor.eval()
             self.test = True
-
         else:
-        
             self.actor_target = copy.deepcopy(self.actor) #a target network is used to make the convergence possible (see papers on DRL)
 
             self.optimizer = torch.optim.Adam(self.actor.parameters(), self.hyperParams.LR) # smooth gradient descent
@@ -69,9 +57,14 @@ class DQNAgent(object):
 
             self.buffer_size = int(self.hyperParams.BUFFER_SIZE)
 
-            self.batch_prec_states = torch.zeros((self.buffer_size,) + self.ob_space.shape)
+            if(cnn):
+                ob_dtype = torch.uint8
+            else:
+                ob_dtype = torch.float
+
+            self.batch_prec_states = torch.zeros((self.buffer_size,) + self.ob_space.shape, dtype=ob_dtype)
             self.batch_actions = torch.zeros((self.buffer_size,) + self.ac_space.shape)
-            self.batch_states = torch.zeros((self.buffer_size,) + self.ob_space.shape)
+            self.batch_states = torch.zeros((self.buffer_size,) + self.ob_space.shape, dtype=ob_dtype)
             self.batch_rewards = torch.zeros(self.buffer_size)
             self.batch_dones = torch.zeros(self.buffer_size)
 
@@ -117,9 +110,9 @@ class DQNAgent(object):
 
 
     def memorize(self, ob_prec, action, ob, reward, done, infos):
-        self.batch_prec_states[self.num_transition_stored%self.buffer_size] = torch.Tensor(ob_prec)
+        self.batch_prec_states[self.num_transition_stored%self.buffer_size] = torch.Tensor(np.array(ob_prec))
         self.batch_actions[self.num_transition_stored%self.buffer_size] = action
-        self.batch_states[self.num_transition_stored%self.buffer_size] = torch.Tensor(ob)
+        self.batch_states[self.num_transition_stored%self.buffer_size] = torch.Tensor(np.array(ob))
         self.batch_rewards[self.num_transition_stored%self.buffer_size] = torch.tensor(reward).view(-1)
         self.batch_dones[self.num_transition_stored%self.buffer_size] = not(done)
 

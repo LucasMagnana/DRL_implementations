@@ -17,13 +17,13 @@ from python.utils import *
 def make_env(module, seed):
     def thunk():
         if("ALE" in module):
-            env = gym.make(module, frameskip=1, repeat_action_probability=0)
+            env = gym.make(module, frameskip=1, repeat_action_probability=0, autoreset=True)
             env = gym.wrappers.RecordEpisodeStatistics(env)
             env = atari_wrappers.NoopResetEnv(env, noop_max=30)
             env = atari_wrappers.MaxAndSkipEnv(env, skip=4)
             env = atari_wrappers.EpisodicLifeEnv(env)
-            if "FIRE" in env.unwrapped.get_action_meanings():
-                env = atari_wrappers.FireResetEnv(env)
+            '''if "FIRE" in env.unwrapped.get_action_meanings():
+                env = atari_wrappers.FireResetEnv(env)'''
             env = atari_wrappers.ClipRewardEnv(env)
             env = gym.wrappers.ResizeObservation(env, (84, 84))
             env = gym.wrappers.GrayScaleObservation(env)
@@ -115,8 +115,9 @@ if __name__ == '__main__':
             if("episode" in infos):
                 episode_end = True
                 tab_sum_rewards.append(infos["episode"]["r"])
-            if("final_info" in infos):
+            elif("final_info" in infos):
                 for elem in infos["final_info"]:
+                    print(elem)
                     if elem != None and "episode" in elem:
                         tab_sum_rewards.append(elem["episode"]["r"])
                         episode_end = True

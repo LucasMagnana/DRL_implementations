@@ -41,17 +41,12 @@ if __name__ == '__main__':
 
 
     if("ALE" in args.module):
-        if(args.algorithm == "3DQN"):
-            env = gym.make(args.module, frameskip=4, obs_type="grayscale", repeat_action_probability=0, render_mode=render_mode)
-            env = ResizeObservation(env, shape=84)
-            env = FrameStack(env, num_stack=4)
-        else:
             env = gym.make(args.module, frameskip=1, repeat_action_probability=0, render_mode=render_mode)
             env = gym.wrappers.RecordEpisodeStatistics(env)
             env = atari_wrappers.NoopResetEnv(env, noop_max=30)
             env = atari_wrappers.MaxAndSkipEnv(env, skip=4)
-            if "FIRE" in env.unwrapped.get_action_meanings():
-                env = atari_wrappers.FireResetEnv(env)
+            '''if "FIRE" in env.unwrapped.get_action_meanings():
+                env = atari_wrappers.FireResetEnv(env)'''
             env = gym.wrappers.ResizeObservation(env, (84, 84))
             env = gym.wrappers.GrayScaleObservation(env)
             env = gym.wrappers.FrameStack(env, 4)
@@ -80,8 +75,6 @@ if __name__ == '__main__':
         steps=0
         done = False
         while not done:
-            if("ALE/" in args.module and args.algorithm == "3DQN"):
-                ob = torch.tensor(ob).squeeze(-1)
             ob = np.expand_dims(ob, 0)
             action, infos = agent.act(ob)
             ob, reward, done, _, infos = env.step(action.squeeze().numpy())
