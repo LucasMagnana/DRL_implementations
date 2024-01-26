@@ -27,17 +27,17 @@ class TD3HyperParams :
 
 class DQNCNNHyperParams :
     def __init__(self):
-        self.BUFFER_SIZE = 1e6
-        self.TARGET_UPDATE = 1e4
+        self.BUFFER_SIZE = 1e5
+        self.TARGET_UPDATE = 1e3
         self.GAMMA = 0.99
         self.LR = 1e-5
         self.BATCH_SIZE = 32
 
         self.HIDDEN_SIZE_2 = 512
 
-        self.TRAINING_FRAMES = 3e7
+        self.TRAINING_FRAMES = 3e6
         self.MAX_STEPS = 18000
-        self.LEARNING_START = 5e4
+        self.LEARNING_START = 5e3
         self.LEARN_EVERY = 4
         self.NOOP = 30
 

@@ -45,8 +45,6 @@ if __name__ == '__main__':
             env = gym.wrappers.RecordEpisodeStatistics(env)
             env = atari_wrappers.NoopResetEnv(env, noop_max=30)
             env = atari_wrappers.MaxAndSkipEnv(env, skip=4)
-            '''if "FIRE" in env.unwrapped.get_action_meanings():
-                env = atari_wrappers.FireResetEnv(env)'''
             env = gym.wrappers.ResizeObservation(env, (84, 84))
             env = gym.wrappers.GrayScaleObservation(env)
             env = gym.wrappers.FrameStack(env, 4)
