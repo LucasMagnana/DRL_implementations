@@ -4,7 +4,7 @@ class TD3HyperParams :
         self.HIDDEN_SIZE_1 = 256
         self.HIDDEN_SIZE_2 = 256
         
-        self.TRAINING_FRAMES = 3e5
+        self.TRAINING_FRAMES = 7e5
         self.POLICY_DELAY = 2
 
         self.BUFFER_SIZE = 5e5  # replay buffer size
@@ -27,17 +27,17 @@ class TD3HyperParams :
 
 class DQNCNNHyperParams :
     def __init__(self):
-        self.BUFFER_SIZE = 1e5
-        self.TARGET_UPDATE = 1e3
+        self.BUFFER_SIZE = 1e6
+        self.TARGET_UPDATE = 1e4
         self.GAMMA = 0.99
         self.LR = 1e-5
         self.BATCH_SIZE = 32
 
         self.HIDDEN_SIZE_2 = 512
 
-        self.TRAINING_FRAMES = 3e6
+        self.TRAINING_FRAMES = 3e7
         self.MAX_STEPS = 18000
-        self.LEARNING_START = 5e3
+        self.LEARNING_START = 5e4
         self.LEARN_EVERY = 4
         self.NOOP = 30
 

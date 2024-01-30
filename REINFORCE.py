@@ -35,7 +35,7 @@ if __name__ == '__main__':
     if(args.test):
         if(args.save):
             env = gym.make(args.module, render_mode="rgb_array") #gym en
-            env = RecordVideo(env, video_folder='videos')
+            env = RecordVideo(env, video_folder='rgb_array')
         else:
             env = gym.make(args.module, render_mode="human") #gym env
     else:

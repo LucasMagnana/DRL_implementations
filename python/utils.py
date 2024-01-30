@@ -56,8 +56,6 @@ def load_agent(args, env, continuous_action_space, hyperParams, actor_to_load=No
         cnn = True
     else:
         cnn = False
-
-    print(env.observation_space)
     
     if(actor_to_load == None and hyperParams.NUM_ENV > 1):
         ob_space = env.single_observation_space

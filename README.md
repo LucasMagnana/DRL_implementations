@@ -28,7 +28,7 @@ Here are some [Gym](https://www.gymlibrary.dev/index.html) environments that hav
 |:--:|:--:| 
 | *ALE/BeamRider-v5 with PPO* | *ALE/SpaceInvaders-v5 with PPO* |
 
-
+Special thanks to [fg91](https://github.com/fg91/Deep-Q-Learning/tree/master) and [vwxyzjn](https://github.com/vwxyzjn/ppo-implementation-details) whose work helped me achieve the results presented with the Atari environments.
 
 ## Dependencies and installation
 
