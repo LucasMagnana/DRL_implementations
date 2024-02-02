@@ -115,7 +115,6 @@ if __name__ == '__main__':
                 tab_sum_rewards.append(infos["episode"]["r"])
             elif("final_info" in infos):
                 for elem in infos["final_info"]:
-                    print(elem)
                     if elem != None and "episode" in elem:
                         tab_sum_rewards.append(elem["episode"]["r"])
                         episode_end = True
