@@ -25,7 +25,6 @@ Here are some [Gym](https://www.gymlibrary.dev/index.html) environments that hav
 |:--:|:--:| 
 | *ALE/Pong-v5 with 3DQN* | *ALE/Breakout-v5 with 3DQN* |
 | <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/BeamRider-v5_PPO.gif?raw=true" width=300> | <img src="https://github.com/LucasMagnana/DRL_implementations/blob/main/images/SpaceInvaders-v5_PPO.gif?raw=true" width=300> | 
-|:--:|:--:| 
 | *ALE/BeamRider-v5 with PPO* | *ALE/SpaceInvaders-v5 with PPO* |
 
 Special thanks to [fg91](https://github.com/fg91/Deep-Q-Learning/tree/master) and [vwxyzjn](https://github.com/vwxyzjn/ppo-implementation-details) whose work helped me achieve the results presented with the Atari environments.

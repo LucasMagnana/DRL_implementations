@@ -103,7 +103,7 @@ class PPOCNNHyperParams :
 
         self.HIDDEN_SIZE_2 = 512
 
-        self.TRAINING_FRAMES = 3e7
+        self.TRAINING_FRAMES = 6e7
 
         self.LAMBDA = 0.95
         self.EPSILON = 0.1
