@@ -7,33 +7,54 @@ import numpy as np
 
 
 
-class Actor(nn.Module):
-
-    def __init__(self, size_ob, size_action, hyperParams, max_action=1, tanh=False): #for saved hyperparameters
-        super(Actor, self).__init__()
-        self.inp = nn.Linear(size_ob, hyperParams.HIDDEN_SIZE_1)
-        self.int = nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2)
-        self.out = nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action)
-        self.max_action = max_action
-        self.tanh = tanh
-
-    def forward(self, ob):
-        ob = ob.float()
-        out = nn.functional.relu(self.inp(ob))
-        out = nn.functional.relu(self.int(out))
-        if(self.tanh):
-            return torch.tanh(self.out(out)*self.max_action)
-        else:
-            return self.out(out)*self.max_action
-
-
-def layer_init(layer, ppo, std=np.sqrt(2), bias_const=0.0):
+def layer_init(layer, ppo=False, std=np.sqrt(2), bias_const=0.0):
     if(ppo):
         torch.nn.init.orthogonal_(layer.weight, std)
         torch.nn.init.constant_(layer.bias, bias_const)
     else:
         torch.nn.init.kaiming_normal_(layer.weight, nonlinearity="relu")
     return layer
+
+
+class Actor(nn.Module):
+
+    def __init__(self, size_ob, size_action, hyperParams, cnn=False): #for saved hyperparameters
+        super(Actor, self).__init__()
+
+        self.cnn = cnn
+
+        if(cnn):
+            self.network = CNN_layers(size_ob, hyperParams, ac=False)
+        else:
+            l1 = layer_init(nn.Linear(np.array(size_ob).prod(), hyperParams.HIDDEN_SIZE_1))
+
+            l2 = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2))
+
+            activation = nn.ReLU()
+
+            self.network = nn.Sequential(
+                l1,
+                activation,
+                l2,
+                activation
+            )
+
+        self.actor = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_2, size_action), std=0.01)
+
+
+
+    def forward(self, ob):
+        features = self.network(ob)
+
+        if(self.cnn):
+            qvalues = self.actor(features[1])
+
+        else:
+            qvalues = self.actor(features)
+
+        return qvalues
+
+
 
 
 class ActorCritic(nn.Module):
@@ -48,7 +69,7 @@ class ActorCritic(nn.Module):
         if(cnn):
             self.network = CNN_layers(size_ob, hyperParams, ppo)
         else:
-            l1 = layer_init(nn.Linear(np.array(size_ob).prod(), 64), ppo)
+            l1 = layer_init(nn.Linear(np.array(size_ob).prod(), hyperParams.HIDDEN_SIZE_1), ppo)
 
             l2 = layer_init(nn.Linear(hyperParams.HIDDEN_SIZE_1, hyperParams.HIDDEN_SIZE_2), ppo)
 
@@ -98,8 +119,13 @@ class ActorCritic(nn.Module):
 
 class CNN_layers(nn.Module):
 
-    def __init__(self, size_ob, hyperParams, ppo): #for saved hyperparameters
+    def __init__(self, size_ob, hyperParams, ppo=False, ac=True): #for saved hyperparameters
         super(CNN_layers, self).__init__()
+
+        if(ac):
+            ol_size = hyperParams.HIDDEN_SIZE_2*2
+        else:
+            ol_size = hyperParams.HIDDEN_SIZE_2
 
         self.hidden_size = hyperParams.HIDDEN_SIZE_2
 
@@ -111,7 +137,7 @@ class CNN_layers(nn.Module):
             layer_init(nn.Conv2d(64, 64, 3, stride=1), ppo),
             nn.ReLU(),
             nn.Flatten(start_dim=1),
-            layer_init(nn.Linear(3136, hyperParams.HIDDEN_SIZE_2*2), ppo),
+            layer_init(nn.Linear(3136, ol_size), ppo),
             nn.ReLU())
 
 

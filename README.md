@@ -3,7 +3,8 @@
 This project contains the implementation of various deep reinforcement learning algorithms. Four algorithms have already been implemented :
 
 - REINFORCE [^1]
-- Double Duelling Deep Q-Network (3DQN) [^2] [^3] [^4]
+- Deep Q-Network (DQN) [^2]
+- Double Duelling Deep Q-Network (3DQN) [^3] [^4]
 - Proximal Policy Optimization (PPO) [^5]
 - Twin Delayed Deep Deterministic Policy Gradient (TD3) [^6]
 
